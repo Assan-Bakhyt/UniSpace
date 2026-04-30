@@ -1,0 +1,38 @@
+# ==================== IntelliJ IDEA ====================
+.idea/
+*.iml
+*.iws
+out/
+target/
+
+# ==================== Java ====================
+*.class
+*.log
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# ==================== Project specific ====================
+# Сериализованные данные (не код!)
+src/resources/data/*.ser
+*.ser
+
+# Лог файлы
+*.log
+logs/
+
+# Временные файлы
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
