@@ -1,5 +1,6 @@
 package UniSpace.model.course;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
@@ -24,7 +25,7 @@ import java.util.Objects;
  *   90-94  → A- (3.67)   75-79 → B- (2.67)   60-64 → C- (1.67)
  *   85-89  → B+ (3.33)   70-74 → C+ (2.33)   55-59 → D+ (1.33)
  */
-public class Mark {
+public class Mark implements Serializable {
 
     private static final double ATT_MAX        = 30.0;
     private static final double FINAL_MAX      = 40.0;

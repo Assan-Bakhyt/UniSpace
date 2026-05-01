@@ -1,10 +1,16 @@
 package UniSpace.model.research;
 
-import UniSpace.exception.HIndexException;
+import UniSpace.enums.Faculty;
 
 import java.util.*;
 
 public interface Researcher {
+
+    /** Display name of this researcher (delegates to User.getFullName()). */
+    String getName();
+
+    /** Faculty this researcher belongs to. */
+    Faculty getSchool();
 
     int getHIndex();
     List<ResearchPaper> getResearchPapers();

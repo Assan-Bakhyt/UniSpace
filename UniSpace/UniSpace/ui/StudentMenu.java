@@ -1,30 +1,42 @@
 package UniSpace.ui;
 
 import UniSpace.exception.CourseRegistrationException;
+import UniSpace.exception.ValidationException;
 import UniSpace.model.course.Course;
 import UniSpace.model.course.Mark;
+import UniSpace.model.user.Student;
+import UniSpace.model.user.Teacher;
+import UniSpace.model.user.User;
+import UniSpace.service.AuthService;
 import UniSpace.service.CourseService;
 import UniSpace.service.MarkService;
+import UniSpace.service.MessageService;
+import UniSpace.service.ResearchService;
 
 import java.util.List;
 import java.util.Scanner;
 
 /**
  * Console menu for students.
- * Handles: course registration, viewing marks, printing transcript.
  */
 public class StudentMenu {
 
-    private final String        studentId;
-    private final CourseService courseService;
-    private final MarkService   markService;
-    private final Scanner       scanner;
+    private final Student         student;
+    private final CourseService   courseService;
+    private final MarkService     markService;
+    private final ResearchService researchService;
+    private final MessageService  messageService;
+    private final Scanner         scanner;
 
-    public StudentMenu(String studentId, CourseService courseService, MarkService markService) {
-        this.studentId     = studentId;
-        this.courseService = courseService;
-        this.markService   = markService;
-        this.scanner       = new Scanner(System.in);
+    public StudentMenu(Student student, CourseService courseService,
+                       MarkService markService, ResearchService researchService,
+                       MessageService messageService) {
+        this.student         = student;
+        this.courseService   = courseService;
+        this.markService     = markService;
+        this.researchService = researchService;
+        this.messageService  = messageService;
+        this.scanner         = new Scanner(System.in);
     }
 
     public void show() {
@@ -38,80 +50,133 @@ public class StudentMenu {
                 case "3" -> viewMyCourses();
                 case "4" -> viewMyMarks();
                 case "5" -> printTranscript();
+                case "6" -> rateTeacher();
+                case "7" -> viewInbox();
+                case "8" -> sendMessage();
+                case "9" -> {
+                    if (!student.isResearcher()) activateResearcherRole();
+                    if (student.isResearcher()) openResearcherMode();
+                }
                 case "0" -> running = false;
-                default  -> System.out.println("Invalid option. Try again.");
+                default  -> System.out.println("  Invalid option. Try again.");
             }
         }
     }
 
-    // ── Menu actions ─────────────────────────────────────────────────────────
+    // ── Menu actions ──────────────────────────────────────────────────────────
 
     private void registerCourse() {
-        System.out.print("Enter course code to register: ");
+        System.out.print("  Course code: ");
         String code = scanner.nextLine().trim();
         try {
-            courseService.registerStudentForCourse(studentId, code);
-            System.out.println("Successfully registered for " + code);
+            courseService.registerStudentForCourse(student.getId(), code);
+            System.out.println("  Registered for " + code);
         } catch (CourseRegistrationException e) {
-            System.out.println("[ERROR] " + e.getMessage());
+            System.out.println("  [ERROR] " + e.getMessage());
         }
     }
 
     private void dropCourse() {
-        System.out.print("Enter course code to drop: ");
+        System.out.print("  Course code: ");
         String code = scanner.nextLine().trim();
         try {
-            courseService.dropCourse(studentId, code);
-            System.out.println("Dropped " + code);
+            courseService.dropCourse(student.getId(), code);
+            System.out.println("  Dropped " + code);
         } catch (CourseRegistrationException e) {
-            System.out.println("[ERROR] " + e.getMessage());
+            System.out.println("  [ERROR] " + e.getMessage());
         }
     }
 
     private void viewMyCourses() {
-        List<Course> courses = courseService.getStudentCourses(studentId);
-        if (courses.isEmpty()) {
-            System.out.println("You are not registered for any courses.");
-            return;
-        }
-        System.out.println("\n── Your Courses ──");
+        List<Course> courses = courseService.getStudentCourses(student.getId());
+        if (courses.isEmpty()) { System.out.println("  No courses registered."); return; }
+        System.out.println("\n  ── Your Courses ──");
         int total = 0;
         for (Course c : courses) {
-            System.out.printf("  %-10s %-30s %d credits%n",
+            System.out.printf("    %-10s %-30s %d credits%n",
                     c.getCourseCode(), c.getName(), c.getCredits());
             total += c.getCredits();
         }
-        System.out.println("  Total credits: " + total + " / 21");
+        System.out.println("  Total credits: " + total + " / " + Student.MAX_CREDITS);
     }
 
     private void viewMyMarks() {
-        List<Mark> marks = markService.getMarksForStudent(studentId);
-        if (marks.isEmpty()) {
-            System.out.println("No marks recorded yet.");
-            return;
-        }
-        System.out.println("\n── Your Marks ──");
-        for (Mark m : marks) {
-            System.out.println("  " + m);
-        }
+        List<Mark> marks = markService.getMarksForStudent(student.getId());
+        if (marks.isEmpty()) { System.out.println("  No marks recorded yet."); return; }
+        System.out.println("\n  ── Your Marks ──");
+        for (Mark m : marks) System.out.println("    " + m);
     }
 
     private void printTranscript() {
-        System.out.println(markService.generateTranscript(studentId));
+        System.out.println(markService.generateTranscript(student.getId()));
+    }
+
+    private void rateTeacher() {
+        System.out.print("  Teacher ID: ");
+        String teacherId = scanner.nextLine().trim();
+        System.out.print("  Rating (1–5): ");
+        try {
+            double rating = Double.parseDouble(scanner.nextLine().trim());
+            User u = AuthService.getInstance().getUserById(teacherId);
+            if (!(u instanceof Teacher)) {
+                System.out.println("  Teacher not found.");
+                return;
+            }
+            Teacher teacher = (Teacher) u;
+            teacher.addRating(rating);
+            System.out.printf("  Rating %.1f submitted for %s.%n", rating, teacher.getFullName());
+        } catch (NumberFormatException e) {
+            System.out.println("  [ERROR] Invalid rating value.");
+        } catch (ValidationException e) {
+            System.out.println("  [ERROR] " + e.getMessage());
+        }
+    }
+
+    private void viewInbox() {
+        List<String> messages = messageService.getInbox(student.getId());
+        if (messages.isEmpty()) { System.out.println("  Inbox is empty."); return; }
+        System.out.println("\n  ── Inbox ──");
+        messages.forEach(m -> System.out.println("  " + m));
+    }
+
+    private void sendMessage() {
+        System.out.print("  Recipient user ID: ");
+        String toId = scanner.nextLine().trim();
+        System.out.print("  Message: ");
+        String text = scanner.nextLine().trim();
+        boolean sent = messageService.send(student.getId(), student.getFullName(), toId, text);
+        System.out.println(sent ? "  Message sent." : "  [ERROR] Recipient not found or not online.");
+    }
+
+    private void activateResearcherRole() {
+        System.out.print("  Activate researcher role? (y/n): ");
+        if (!"y".equalsIgnoreCase(scanner.nextLine().trim())) return;
+        student.activateResearcher();
+        researchService.addResearcher(student.getResearcherProfile());
+        System.out.println("  Researcher role activated.");
+    }
+
+    private void openResearcherMode() {
+        new ResearcherMenu(student.getFaculty(), researchService).show();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void printMenu() {
-        System.out.println("\n══════════════════════════════");
-        System.out.println(" Student Menu — ID: " + studentId);
-        System.out.println("══════════════════════════════");
-        System.out.println(" 1. Register for a course");
-        System.out.println(" 2. Drop a course");
-        System.out.println(" 3. View my courses");
-        System.out.println(" 4. View my marks");
-        System.out.println(" 5. Print transcript");
-        System.out.println(" 0. Exit");
-        System.out.print("Choice: ");
+        boolean isRes = student.isResearcher();
+        System.out.println("\n  ══════════════════════════════════════");
+        System.out.println("   Student Menu — " + student.getFullName());
+        System.out.println("  ══════════════════════════════════════");
+        System.out.println("   1. Register for a course");
+        System.out.println("   2. Drop a course");
+        System.out.println("   3. View my courses");
+        System.out.println("   4. View my marks");
+        System.out.println("   5. Print transcript");
+        System.out.println("   6. Rate a teacher");
+        System.out.println("   7. View inbox");
+        System.out.println("   8. Send message");
+        System.out.println("   9. Researcher mode" + (isRes ? "" : " [not available]"));
+        System.out.println("   0. Exit");
+        System.out.print("  Choice: ");
     }
 }

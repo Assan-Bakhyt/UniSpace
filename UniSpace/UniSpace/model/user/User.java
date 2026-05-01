@@ -1,5 +1,6 @@
 package UniSpace.model.user;
 
+import UniSpace.enums.Faculty;
 import UniSpace.enums.UserRole;
 import java.io.Serializable;
 import java.util.Objects;
@@ -39,6 +40,9 @@ public abstract class User implements Serializable {
     public void setEmail(String email) { this.email = email; }
     public void setPassword(String password) { this.password = password; }
     public void setRole(UserRole role) { this.role = role; }
+
+    /** Returns the faculty this user belongs to. Overridden by Employee and Student. */
+    public Faculty getFaculty() { return null; }
 
     @Override
     public boolean equals(Object o) {

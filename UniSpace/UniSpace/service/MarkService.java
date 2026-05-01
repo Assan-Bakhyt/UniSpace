@@ -172,6 +172,27 @@ public class MarkService {
         return sb.toString();
     }
 
+    /**
+     * Calculates the cumulative GPA for a student based on all graded courses.
+     * Weighted by credits: sum(gradePoint * credits) / sum(credits).
+     */
+    public double getGpa(String studentId) {
+        List<Course> courses = courseService.getStudentCourses(studentId);
+        Map<String, Mark> markIndex = new HashMap<>();
+        for (Mark m : getMarksForStudent(studentId)) markIndex.put(m.getCourseCode(), m);
+
+        double totalGpaPoints = 0.0;
+        int    totalCredits   = 0;
+        for (Course course : courses) {
+            Mark mark = markIndex.get(course.getCourseCode());
+            if (mark != null && mark.getTotal() != null) {
+                totalGpaPoints += mark.getGradePoint() * course.getCredits();
+                totalCredits   += course.getCredits();
+            }
+        }
+        return totalCredits > 0 ? totalGpaPoints / totalCredits : 0.0;
+    }
+
     // ── Mark Report (for Teacher) ─────────────────────────────────────────────
 
     /**

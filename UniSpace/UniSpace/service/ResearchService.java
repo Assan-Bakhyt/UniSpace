@@ -1,5 +1,6 @@
 package UniSpace.service;
 
+import UniSpace.enums.Faculty;
 import UniSpace.model.research.ResearchPaper;
 import UniSpace.model.research.Researcher;
 
@@ -9,70 +10,62 @@ import java.util.List;
 
 public class ResearchService {
 
-    private List<Researcher> researchers;
+    private static ResearchService instance;
 
-    public ResearchService() {
-        this.researchers = new ArrayList<>();
+    public static ResearchService getInstance() {
+        if (instance == null) instance = new ResearchService();
+        return instance;
     }
 
+    private final List<Researcher> researchers = new ArrayList<>();
+
+    private ResearchService() {}
+
+    // ── Registry ──────────────────────────────────────────────────────────────
+
     public void addResearcher(Researcher researcher) {
-        if (!researchers.contains(researcher)) {
-            researchers.add(researcher);
-        }
+        if (!researchers.contains(researcher)) researchers.add(researcher);
     }
 
     public List<Researcher> getResearchers() {
         return researchers;
     }
 
+    // ── Paper queries ─────────────────────────────────────────────────────────
+
     public void printAllPapers(Comparator<ResearchPaper> comparator) {
         List<ResearchPaper> allPapers = new ArrayList<>();
-
-        for (Researcher researcher : researchers) {
-            allPapers.addAll(researcher.getResearchPapers());
-        }
-
+        for (Researcher r : researchers) allPapers.addAll(r.getResearchPapers());
         allPapers.sort(comparator);
-
-        for (ResearchPaper paper : allPapers) {
-            System.out.println(paper);
-        }
+        for (ResearchPaper paper : allPapers) System.out.println(paper);
     }
 
-    public Researcher getTopCitedResearcherBySchool(String school) {
-        Researcher topResearcher = null;
+    // ── Researcher queries ────────────────────────────────────────────────────
 
-        for (Researcher researcher : researchers) {
-            if (researcher.getSchool().equalsIgnoreCase(school)) {
-                if (topResearcher == null ||
-                        researcher.getTotalCitations() > topResearcher.getTotalCitations()) {
-                    topResearcher = researcher;
-                }
+    public Researcher getTopCitedResearcherBySchool(Faculty school) {
+        Researcher top = null;
+        for (Researcher r : researchers) {
+            if (r.getSchool() == school) {
+                if (top == null || r.getTotalCitations() > top.getTotalCitations()) top = r;
             }
         }
-
-        return topResearcher;
+        return top;
     }
 
     public Researcher getTopCitedResearcherByYear(int year) {
-        Researcher topResearcher = null;
+        Researcher top = null;
         int maxCitations = -1;
-
-        for (Researcher researcher : researchers) {
-            int citationsInYear = 0;
-
-            for (ResearchPaper paper : researcher.getResearchPapers()) {
-                if (paper.getDate().getYear() == year) {
-                    citationsInYear += paper.getCitations();
-                }
+        for (Researcher r : researchers) {
+            int citations = 0;
+            for (ResearchPaper p : r.getResearchPapers()) {
+                if (p.getDate() != null && p.getDate().getYear() == year)
+                    citations += p.getCitations();
             }
-
-            if (citationsInYear > maxCitations) {
-                maxCitations = citationsInYear;
-                topResearcher = researcher;
+            if (citations > maxCitations) {
+                maxCitations = citations;
+                top = r;
             }
         }
-
-        return topResearcher;
+        return top;
     }
 }

@@ -1,10 +1,11 @@
 package UniSpace.model.course;
 
 import UniSpace.enums.LessonType;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-public class Lesson {
+public class Lesson implements Serializable {
     private String lessonId;
     private String title;
     private LessonType type;

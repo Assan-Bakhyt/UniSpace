@@ -1,5 +1,6 @@
 package UniSpace.model.user;
 
+import UniSpace.enums.Faculty;
 import UniSpace.enums.ManagerType;
 import UniSpace.enums.UserRole;
 
@@ -11,7 +12,7 @@ public class Manager extends Employee {
 
     public Manager(String id, String firstName, String lastName,
                    String email, String password,
-                   String department, double salary, ManagerType managerType) {
+                   Faculty department, double salary, ManagerType managerType) {
         super(id, firstName, lastName, email, password,
                 UserRole.MANAGER, department, salary);
         this.managerType = managerType;

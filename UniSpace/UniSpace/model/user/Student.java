@@ -1,140 +1,88 @@
 package UniSpace.model.user;
 
+import UniSpace.enums.Faculty;
 import UniSpace.enums.UserRole;
-import UniSpace.exception.CreditLimitException;
 import UniSpace.exception.HIndexException;
 import UniSpace.exception.ValidationException;
-import UniSpace.model.course.Course;
-import UniSpace.model.course.Mark;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import UniSpace.model.research.ResearchPaper;
-import UniSpace.model.research.Researcher;
+import UniSpace.model.research.ResearcherProfile;
 
-public class Student extends User implements Comparable<Student>, Researcher {
+public class Student extends User implements Comparable<Student> {
 
     public static final int MAX_CREDITS = 21;
-    public static final int MAX_FAILS = 3;
+    public static final int MAX_FAILS   = 3;
 
-    private int hIndex;
-    private List<ResearchPaper> researchPapers = new ArrayList<>();
+    private int     year;
+    private Faculty faculty;
+    private double  gpa;
 
-    private int year;
-    private String major;
-    private double gpa;
-    private int totalCredits;
-    private int failCount;
-    private List<Course> registeredCourses;
-    private List<Mark> marks;
-    private Researcher supervisor;
-    private boolean isResearcher;
-
-//     supervisor — тип Researcher, его добавит коллега из research-части
-//     Нужно согласовать интерфейс:
-//     private Researcher supervisor;
+    private ResearcherProfile researcherProfile;
+    private ResearcherProfile supervisor;
 
     public Student() {}
 
     public Student(String id, String firstName, String lastName,
                    String email, String password,
-                   int year, String major) {
+                   int year, Faculty faculty) {
         super(id, firstName, lastName, email, password, UserRole.STUDENT);
-        this.year = year;
-        this.major = major;
-        this.gpa = 0.0;
-        this.totalCredits = 0;
-        this.failCount = 0;
-        this.registeredCourses = new ArrayList<>();
-        this.marks = new ArrayList<>();
-        this.isResearcher = false;
+        this.year    = year;
+        this.faculty = faculty;
     }
 
-    public void registerCourse(Course course) throws CreditLimitException {
-        int newTotal = totalCredits + course.getCredits();
-        if (newTotal > MAX_CREDITS) {
-            throw new CreditLimitException(newTotal, MAX_CREDITS);
-        }
-        if (!registeredCourses.contains(course)) {
-            registeredCourses.add(course);
-            totalCredits += course.getCredits();
-        }
+    // ── Faculty ───────────────────────────────────────────────────────────────
+
+    @Override
+    public Faculty getFaculty() { return faculty; }
+
+    // ── Researcher role ───────────────────────────────────────────────────────
+
+    public boolean isResearcher() { return researcherProfile != null; }
+
+    /**
+     * Grants researcher role to this student — creates a ResearcherProfile
+     * that holds hIndex and papers. Idempotent: safe to call multiple times.
+     */
+    public void activateResearcher() {
+        if (researcherProfile == null) researcherProfile = new ResearcherProfile(this);
     }
 
-    public void dropCourse(Course course) {
-        if (registeredCourses.remove(course)) {
-            totalCredits -= course.getCredits();
-        }
-    }
+    public ResearcherProfile getResearcherProfile() { return researcherProfile; }
 
-    public void recordFail() throws ValidationException {
-        this.failCount++;
-        if (failCount > MAX_FAILS) {
-            throw new ValidationException("failCount",
-                    "Student exceeded maximum allowed fails (" + MAX_FAILS + ")");
-        }
-    }
-
-    public void addMark(Mark mark) {
-        marks.add(mark);
-        recalculateGpa();
-    }
-
-    private void recalculateGpa() {
-        if (marks.isEmpty()) { gpa = 0.0; return; }
-        gpa = marks.stream()
-                .mapToDouble(Mark::getTotalScore)
-                .average()
-                .orElse(0.0);
-    }
-
-    public int getYear() { return year; }
-    public void setYear(int year) { this.year = year; }
-    public String getMajor() { return major; }
-    public void setMajor(String major) { this.major = major; }
-    public double getGpa() { return gpa; }
-    public int getTotalCredits() { return totalCredits; }
-    public int getFailCount() { return failCount; }
-    public boolean isResearcher() { return isResearcher; }
-    public void setResearcher(boolean researcher) { this.isResearcher = researcher; }
-    public List<Course> getRegisteredCourses() { return Collections.unmodifiableList(registeredCourses); }
-    public List<Mark> getMarks() { return Collections.unmodifiableList(marks); }
-    public void setSupervisor(Researcher supervisor) throws HIndexException {
-        if (supervisor.getHIndex() < 3) {
-            throw new HIndexException("Supervisor must have h-index >= 3");
-        }
+    /**
+     * Assigns a supervisor. Only 4th-year students may have one.
+     * Supervisor must have h-index >= 3.
+     *
+     * @throws ValidationException if student is not in year 4
+     * @throws HIndexException     if the supervisor's h-index is below 3
+     */
+    public void setSupervisor(ResearcherProfile supervisor) throws ValidationException, HIndexException {
+        if (year != 4)
+            throw new ValidationException("year",
+                    "Only 4th-year students can have a research supervisor (current year: " + year + ")");
+        if (supervisor.getHIndex() < 3)
+            throw new HIndexException("Supervisor must have h-index >= 3, got: " + supervisor.getHIndex());
         this.supervisor = supervisor;
     }
 
-    @Override
-    public int getHIndex() {
-        return hIndex;
-    }
+    public ResearcherProfile getSupervisor() { return supervisor; }
 
-    public void setHIndex(int hIndex) {
-        this.hIndex = hIndex;
-    }
+    // ── Getters / setters ─────────────────────────────────────────────────────
 
-    @Override
-    public List<ResearchPaper> getResearchPapers() {
-        return researchPapers;
-    }
+    public int     getYear()             { return year; }
+    public void    setYear(int year)     { this.year = year; }
+    public void    setFaculty(Faculty f) { this.faculty = f; }
+    public double  getGpa()             { return gpa; }
+    public void    setGpa(double gpa)   { this.gpa = gpa; }
 
-    public void addResearchPaper(ResearchPaper paper) {
-        researchPapers.add(paper);
-    }
-
-
+    // ── Comparable: descending GPA ────────────────────────────────────────────
 
     @Override
     public int compareTo(Student other) {
-        return Double.compare(other.gpa, this.gpa); // по убыванию GPA
+        return Double.compare(other.gpa, this.gpa);
     }
 
     @Override
     public String toString() {
         return super.toString() + String.format(
-                " | Year: %d | Major: %s | GPA: %.2f | Credits: %d/%d",
-                year, major, gpa, totalCredits, MAX_CREDITS);
+                " | Year: %d | Faculty: %s | GPA: %.2f", year, faculty, gpa);
     }
 }

@@ -9,13 +9,18 @@ import UniSpace.model.user.User;
 import UniSpace.service.AuthService;
 import UniSpace.service.CourseService;
 import UniSpace.service.MarkService;
+import UniSpace.service.MessageService;
+import UniSpace.service.ResearchService;
 
 import java.util.Scanner;
 
+/**
+ * Entry-point menu: handles login and dispatches to the appropriate role menu.
+ */
 public class LoginMenu {
 
-    private final Scanner     scanner;
-    private final AuthService authService;
+    private final Scanner      scanner;
+    private final AuthService  authService;
 
     public LoginMenu() {
         this.scanner     = new Scanner(System.in);
@@ -42,6 +47,8 @@ public class LoginMenu {
         }
     }
 
+    // ── Private helpers ───────────────────────────────────────────────────────
+
     private void attemptLogin() {
         System.out.println();
         System.out.print("  Email: ");
@@ -55,6 +62,9 @@ public class LoginMenu {
             System.out.println("\n  Welcome, " + user.getFullName() + "! [" + user.getRole() + "]");
             System.out.println("  ----------------------------------------");
 
+            // Register user with the messaging system for this session
+            MessageService.getInstance().register(user.getId(), user.getFullName());
+
             dispatchMenu(user);
 
             authService.logout();
@@ -65,19 +75,24 @@ public class LoginMenu {
     }
 
     /**
-     * Opens the appropriate menu based on the logged-in user's concrete type.
-     * All UI–service wiring lives here, keeping model classes free of UI/service imports.
+     * Routes the logged-in user to their primary menu.
+     * All UI–service wiring lives here — model classes stay free of UI imports.
      */
     private void dispatchMenu(User user) {
-        CourseService courseService = CourseService.getInstance();
-        MarkService   markService   = MarkService.getInstance();
+        CourseService    courseService    = CourseService.getInstance();
+        MarkService      markService      = MarkService.getInstance();
+        ResearchService  researchService  = ResearchService.getInstance();
+        MessageService   messageService   = MessageService.getInstance();
 
         if (user instanceof Student s) {
-            new StudentMenu(s.getId(), courseService, markService).show();
+            new StudentMenu(s, courseService, markService, researchService, messageService).show();
+
         } else if (user instanceof Teacher t) {
-            new TeacherMenu(t.getId(), courseService, markService).show();
+            new TeacherMenu(t, courseService, markService, researchService, messageService).show();
+
         } else if (user instanceof Admin a) {
             new AdminMenu(a).show();
+
         } else if (user instanceof Manager m) {
             new ManagerMenu(m).show();
         }

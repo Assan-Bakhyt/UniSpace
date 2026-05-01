@@ -5,6 +5,7 @@ import UniSpace.exception.ValidationException;
 import UniSpace.model.user.User;
 import UniSpace.storage.DataRepository;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -85,6 +86,12 @@ public class AuthService {
     }
 
     public Map<String, User> getAllUsers() {
-        return users;
+        return Collections.unmodifiableMap(users);
+    }
+
+    public User getUserById(String id) {
+        return users.values().stream()
+                .filter(u -> u.getId().equals(id))
+                .findFirst().orElse(null);
     }
 }
