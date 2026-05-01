@@ -11,6 +11,7 @@ import java.util.Objects;
  */
 public class Course {
 
+<<<<<<< HEAD
     private String       courseCode;
     private String       name;
     private int          credits;
@@ -93,4 +94,9 @@ public class Course {
 
     @Override
     public int hashCode() { return Objects.hash(courseCode); }
+=======
+    public int getCredits(){
+        return 0; // Реализуйте!!!
+    }
+>>>>>>> origin/main
 }

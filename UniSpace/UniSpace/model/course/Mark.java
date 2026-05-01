@@ -14,6 +14,7 @@ import java.util.Objects;
  *   < 60   → F   (0.0)  ← counts as a fail
  */
 public class Mark {
+<<<<<<< HEAD
 
     private static final double ATT_MAX   = 30.0;
     private static final double FINAL_MAX = 40.0;
@@ -144,4 +145,9 @@ public class Mark {
 
     @Override
     public int hashCode() { return Objects.hash(markId); }
+=======
+    public double getTotalScore() {
+        return 0.0; // Реализуйте!!!
+    }
+>>>>>>> origin/main
 }
