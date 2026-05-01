@@ -1,5 +1,8 @@
 package UniSpace.enums;
 
 public enum ManagerType {
-    OR, DEPARTMENT, DEAN;
+    OR,
+    DEPARTMENT,
+    DEAN,
+    RECTOR
 }
