@@ -21,12 +21,6 @@ public class Manager extends Employee {
     public void setManagerType(ManagerType managerType) { this.managerType = managerType; }
 
     @Override
-    public void showMenu() {
-        // ManagerMenu.getInstance().show(this) — подключит коллега
-        System.out.println("=== MANAGER MENU ===");
-    }
-
-    @Override
     public String toString() {
         return super.toString() + String.format(" | ManagerType: %s", managerType);
     }

@@ -25,8 +25,6 @@ public abstract class User implements Serializable {
         this.role = role;
     }
 
-    public abstract void showMenu();
-
     public String getId() { return id; }
     public String getFirstName() { return firstName; }
     public String getLastName() { return lastName; }

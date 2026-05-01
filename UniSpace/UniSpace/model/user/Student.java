@@ -6,7 +6,6 @@ import UniSpace.exception.HIndexException;
 import UniSpace.exception.ValidationException;
 import UniSpace.model.course.Course;
 import UniSpace.model.course.Mark;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,9 +24,9 @@ public class Student extends User implements Comparable<Student> {
     private List<Mark> marks;
     private boolean isResearcher;
 
-    // supervisor — тип Researcher, его добавит коллега из research-части
-    // Нужно согласовать интерфейс:
-    // private Researcher supervisor;
+//     supervisor — тип Researcher, его добавит коллега из research-части
+//     Нужно согласовать интерфейс:
+//     private Researcher supervisor;
 
     public Student() {}
 
@@ -96,21 +95,9 @@ public class Student extends User implements Comparable<Student> {
     public List<Mark> getMarks() { return Collections.unmodifiableList(marks); }
 
     @Override
-    public void showMenu() {
-        // StudentMenu.getInstance().show(this) — подключит коллега
-        System.out.println("=== STUDENT MENU ===");
-    }
-
-    @Override
     public int compareTo(Student other) {
         return Double.compare(other.gpa, this.gpa); // по убыванию GPA
     }
-
-    @Override
-    public boolean equals(Object o) { return super.equals(o); }
-
-    @Override
-    public int hashCode() { return super.hashCode(); }
 
     @Override
     public String toString() {

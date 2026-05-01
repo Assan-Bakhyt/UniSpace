@@ -5,6 +5,7 @@ import UniSpace.exception.CourseRegistrationException;
 import UniSpace.exception.MaxFailsException;
 import UniSpace.model.course.Course;
 import UniSpace.model.course.Mark;
+import UniSpace.model.user.Student;
 
 import java.util.*;
 
@@ -20,8 +21,12 @@ import java.util.*;
  */
 public class CourseService {
 
-    private static final int MAX_CREDITS = 21;
-    private static final int MAX_FAILS   = 3;
+    private static CourseService instance;
+
+    public static CourseService getInstance() {
+        if (instance == null) instance = new CourseService();
+        return instance;
+    }
 
     /** All courses in the system, keyed by courseCode */
     private final Map<String, Course> courseMap = new HashMap<>();
@@ -99,13 +104,13 @@ public class CourseService {
 
         // Check fail limit
         int fails = failCounts.getOrDefault(failKey(studentId, courseCode), 0);
-        if (fails >= MAX_FAILS)
+        if (fails >= Student.MAX_FAILS)
             throw new MaxFailsException(courseCode);
 
         // Check credit limit
         int current = studentCredits.getOrDefault(studentId, 0);
-        if (current + course.getCredits() > MAX_CREDITS)
-            throw new CreditLimitException(current, course.getCredits());
+        if (current + course.getCredits() > Student.MAX_CREDITS)
+            throw new CreditLimitException(current, Student.MAX_CREDITS);
 
         // All checks passed — enroll
         enrolled.add(courseCode);

@@ -70,21 +70,9 @@ public class Teacher extends Employee implements Comparable<Teacher> {
     }
 
     @Override
-    public void showMenu() {
-        // TeacherMenu.getInstance().show(this) — подключит коллега
-        System.out.println("=== TEACHER MENU ===");
-    }
-
-    @Override
     public int compareTo(Teacher other) {
         return Double.compare(other.rating, this.rating); // по убыванию рейтинга
     }
-
-    @Override
-    public boolean equals(Object o) { return super.equals(o); }
-
-    @Override
-    public int hashCode() { return super.hashCode(); }
 
     @Override
     public String toString() {

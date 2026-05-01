@@ -13,12 +13,6 @@ public class Admin extends Employee {
     }
 
     @Override
-    public void showMenu() {
-        // AdminMenu.getInstance().show(this) — подключит коллега
-        System.out.println("=== ADMIN MENU ===");
-    }
-
-    @Override
     public String toString() {
         return super.toString() + " [ADMIN]";
     }

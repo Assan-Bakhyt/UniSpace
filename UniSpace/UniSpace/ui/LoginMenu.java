@@ -1,18 +1,24 @@
 package UniSpace.ui;
 
 import UniSpace.exception.AuthenticationException;
+import UniSpace.model.user.Admin;
+import UniSpace.model.user.Manager;
+import UniSpace.model.user.Student;
+import UniSpace.model.user.Teacher;
 import UniSpace.model.user.User;
 import UniSpace.service.AuthService;
+import UniSpace.service.CourseService;
+import UniSpace.service.MarkService;
 
 import java.util.Scanner;
 
 public class LoginMenu {
 
-    private final Scanner scanner;
+    private final Scanner     scanner;
     private final AuthService authService;
 
     public LoginMenu() {
-        this.scanner = new Scanner(System.in);
+        this.scanner     = new Scanner(System.in);
         this.authService = AuthService.getInstance();
     }
 
@@ -46,18 +52,34 @@ public class LoginMenu {
 
         try {
             User user = authService.login(email, password);
-
             System.out.println("\n  Welcome, " + user.getFullName() + "! [" + user.getRole() + "]");
             System.out.println("  ----------------------------------------");
 
-            // ПОЛИМОРФИЗМ: каждый тип пользователя показывает своё меню
-            user.showMenu();
+            dispatchMenu(user);
 
-            // После выхода из меню — разлогинить
             authService.logout();
 
         } catch (AuthenticationException e) {
             System.out.println("\n  Login failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Opens the appropriate menu based on the logged-in user's concrete type.
+     * All UI–service wiring lives here, keeping model classes free of UI/service imports.
+     */
+    private void dispatchMenu(User user) {
+        CourseService courseService = CourseService.getInstance();
+        MarkService   markService   = MarkService.getInstance();
+
+        if (user instanceof Student s) {
+            new StudentMenu(s.getId(), courseService, markService).show();
+        } else if (user instanceof Teacher t) {
+            new TeacherMenu(t.getId(), courseService, markService).show();
+        } else if (user instanceof Admin a) {
+            new AdminMenu(a).show();
+        } else if (user instanceof Manager m) {
+            new ManagerMenu(m).show();
         }
     }
 

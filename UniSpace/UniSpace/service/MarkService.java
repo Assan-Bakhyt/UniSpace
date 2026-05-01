@@ -10,6 +10,13 @@ import java.util.*;
  */
 public class MarkService {
 
+    private static MarkService instance;
+
+    public static MarkService getInstance() {
+        if (instance == null) instance = new MarkService(CourseService.getInstance());
+        return instance;
+    }
+
     /** "studentId:courseCode" → Mark */
     private final Map<String, Mark> markStore = new HashMap<>();
 
@@ -39,21 +46,33 @@ public class MarkService {
 
     /**
      * Sets att2 score (0–30) for a student in a course.
+     * If att1 is already set and att1+att2 < 30, records a course fail immediately —
+     * the student is not admitted to the final exam.
      */
     public void setAtt2(String studentId, String courseCode, double score) {
-        getOrCreateMark(studentId, courseCode).setAtt2(score);
+        Mark mark = getOrCreateMark(studentId, courseCode);
+        mark.setAtt2(score);
+        if (mark.getAtt1() != null && mark.isCourseFail()) {
+            courseService.recordFail(studentId, courseCode);
+        }
     }
 
     /**
      * Sets final exam score (0–40) for a student in a course.
-     * After saving, automatically records a fail if the student did not pass.
+     *
+     * Outcomes recorded automatically:
+     *   finalExam >= 20        → passed (no fail recorded)
+     *   10 <= finalExam < 20   → FX, retake exam only (no course fail)
+     *   finalExam < 10         → F, course fail recorded
+     *
+     * If the student was not admitted (att1+att2 < 30), the fail was already
+     * recorded in setAtt2() and is not double-counted here.
      */
     public void setFinalExam(String studentId, String courseCode, double score) {
         Mark mark = getOrCreateMark(studentId, courseCode);
         mark.setFinalExam(score);
-
-        // Auto-record fail when all components are present and student didn't pass
-        if (!mark.isPassed()) {
+        // Record course fail only when admitted but final < 10 (FX is NOT a course fail)
+        if (mark.isAdmittedToFinal() && mark.isCourseFail()) {
             courseService.recordFail(studentId, courseCode);
         }
     }
@@ -132,14 +151,14 @@ public class MarkService {
             String total = mark != null && mark.getTotal()     != null ? String.format("%.1f", mark.getTotal())     : "-";
             String grade = mark != null ? mark.getLetterGrade() : "N/A";
             String gpa   = mark != null && mark.getTotal() != null
-                    ? String.format("%.1f", mark.getGpaPoints()) : "-";
+                    ? String.format("%.1f", mark.getGradePoint()) : "-";
 
             sb.append(String.format("%-12s %-8d %-6s %-6s %-7s %-7s %-6s %-4s%n",
                     course.getCourseCode(), course.getCredits(),
                     att1, att2, fin, total, grade, gpa));
 
             if (mark != null && mark.getTotal() != null) {
-                totalGpaPoints += mark.getGpaPoints() * course.getCredits();
+                totalGpaPoints += mark.getGradePoint() * course.getCredits();
                 totalCredits   += course.getCredits();
                 gradedCourses++;
             }
@@ -194,11 +213,13 @@ public class MarkService {
         // stats counters
         int totalStudents = marks.size();
         int passed        = 0;
+        int fx            = 0;
         int failed        = 0;
         double sumTotal   = 0.0;
         int gradedCount   = 0;
         Map<String, Integer> gradeDist = new LinkedHashMap<>();
-        for (String g : new String[]{"A","B","C","D","F"}) gradeDist.put(g, 0);
+        for (String g : new String[]{"A","A-","B+","B","B-","C+","C","C-","D+","D","F","FX"})
+            gradeDist.put(g, 0);
 
         for (Mark m : marks) {
             String att1  = m.getAtt1()      != null ? String.format("%.1f", m.getAtt1())      : "-";
@@ -210,22 +231,32 @@ public class MarkService {
             sb.append(String.format("%-14s %-7s %-7s %-7s %-7s %-6s%n",
                     m.getStudentId(), att1, att2, fin, total, grade));
 
-            // accumulate stats only when fully graded
-            if (m.getTotal() != null) {
-                sumTotal += m.getTotal();
+            // count stats when outcome is known (att1+att2 set, and either not admitted or final is set)
+            boolean hasOutcome = m.getAtt1() != null && m.getAtt2() != null
+                    && (!m.isAdmittedToFinal() || m.getFinalExam() != null);
+            if (hasOutcome) {
                 gradedCount++;
-                if (m.isPassed()) passed++; else failed++;
-                gradeDist.merge(grade, 1, Integer::sum);
+                if (m.isPassed()) {
+                    passed++;
+                    sumTotal += m.getTotal();
+                } else if (m.isFX()) {
+                    fx++;
+                    if (m.getTotal() != null) sumTotal += m.getTotal();
+                } else {
+                    failed++;
+                }
+                if (!grade.equals("N/A")) gradeDist.merge(grade, 1, Integer::sum);
             }
         }
 
         sb.append("------------------------------------------------------------\n");
-        double avgTotal  = gradedCount > 0 ? sumTotal / gradedCount : 0.0;
-        int    passRate  = gradedCount > 0 ? (int) Math.round(passed * 100.0 / gradedCount) : 0;
+        double avgTotal = gradedCount > 0 ? sumTotal / gradedCount : 0.0;
+        int    passRate = gradedCount > 0 ? (int) Math.round(passed * 100.0 / gradedCount) : 0;
 
-        sb.append(String.format(" Students: %d   Passed: %d   Failed: %d   Pass rate: %d%%%n",
-                totalStudents, passed, failed, passRate));
-        sb.append(String.format(" Average total: %.1f%n", avgTotal));
+        sb.append(String.format(
+                " Students: %d   Passed: %d   FX: %d   Failed: %d   Pass rate: %d%%%n",
+                totalStudents, passed, fx, failed, passRate));
+        sb.append(String.format(" Average total (graded): %.1f%n", avgTotal));
         sb.append(" Grade distribution:");
         for (Map.Entry<String, Integer> e : gradeDist.entrySet()) {
             sb.append(String.format("  %s=%d", e.getKey(), e.getValue()));

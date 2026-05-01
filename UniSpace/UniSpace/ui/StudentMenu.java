@@ -1,8 +1,8 @@
 package UniSpace.ui;
 
+import UniSpace.exception.CourseRegistrationException;
 import UniSpace.model.course.Course;
 import UniSpace.model.course.Mark;
-import UniSpace.exception.CourseRegistrationException;
 import UniSpace.service.CourseService;
 import UniSpace.service.MarkService;
 
