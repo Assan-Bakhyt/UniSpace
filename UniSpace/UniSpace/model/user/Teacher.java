@@ -10,13 +10,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class Teacher extends Employee implements Comparable<Teacher> {
+import UniSpace.model.research.ResearchPaper;
+import UniSpace.model.research.Researcher;
+
+public class Teacher extends Employee implements Comparable<Teacher>, Researcher {
 
     private TeacherTitle title;
     private List<Course> courses;
     private double rating;
     private int ratingCount;
     private boolean isResearcher;
+
+    private int hIndex;
+    private List<ResearchPaper> researchPapers = new ArrayList<>();
 
     public Teacher() {}
 
@@ -68,6 +74,35 @@ public class Teacher extends Employee implements Comparable<Teacher> {
             this.isResearcher = researcher;
         }
     }
+
+    @Override
+    public int getHIndex() {
+        return hIndex;
+    }
+
+    public void setHIndex(int hIndex) {
+        this.hIndex = hIndex;
+    }
+
+    @Override
+    public String getName() {
+        return getFullName();
+    }
+
+    @Override
+    public String getSchool() {
+        return getDepartment(); // у преподавателя school = department
+    }
+
+    @Override
+    public List<ResearchPaper> getResearchPapers() {
+        return researchPapers;
+    }
+
+    public void addResearchPaper(ResearchPaper paper) {
+        researchPapers.add(paper);
+    }
+
 
     @Override
     public int compareTo(Teacher other) {

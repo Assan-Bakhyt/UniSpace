@@ -9,11 +9,16 @@ import UniSpace.model.course.Mark;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import UniSpace.model.research.ResearchPaper;
+import UniSpace.model.research.Researcher;
 
-public class Student extends User implements Comparable<Student> {
+public class Student extends User implements Comparable<Student>, Researcher {
 
     public static final int MAX_CREDITS = 21;
     public static final int MAX_FAILS = 3;
+
+    private int hIndex;
+    private List<ResearchPaper> researchPapers = new ArrayList<>();
 
     private int year;
     private String major;
@@ -22,6 +27,7 @@ public class Student extends User implements Comparable<Student> {
     private int failCount;
     private List<Course> registeredCourses;
     private List<Mark> marks;
+    private Researcher supervisor;
     private boolean isResearcher;
 
 //     supervisor — тип Researcher, его добавит коллега из research-части
@@ -93,6 +99,32 @@ public class Student extends User implements Comparable<Student> {
     public void setResearcher(boolean researcher) { this.isResearcher = researcher; }
     public List<Course> getRegisteredCourses() { return Collections.unmodifiableList(registeredCourses); }
     public List<Mark> getMarks() { return Collections.unmodifiableList(marks); }
+    public void setSupervisor(Researcher supervisor) throws HIndexException {
+        if (supervisor.getHIndex() < 3) {
+            throw new HIndexException("Supervisor must have h-index >= 3");
+        }
+        this.supervisor = supervisor;
+    }
+
+    @Override
+    public int getHIndex() {
+        return hIndex;
+    }
+
+    public void setHIndex(int hIndex) {
+        this.hIndex = hIndex;
+    }
+
+    @Override
+    public List<ResearchPaper> getResearchPapers() {
+        return researchPapers;
+    }
+
+    public void addResearchPaper(ResearchPaper paper) {
+        researchPapers.add(paper);
+    }
+
+
 
     @Override
     public int compareTo(Student other) {
