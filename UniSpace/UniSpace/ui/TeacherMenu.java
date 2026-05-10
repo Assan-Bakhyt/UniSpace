@@ -88,6 +88,7 @@ public class TeacherMenu {
                 default  -> { System.out.println("  [ERROR] Unknown component."); return; }
             }
             System.out.println("  Mark saved.");
+            UniSpace.storage.DataRepository.getInstance().save();
             markService.getMark(studentId, courseCode)
                     .ifPresent(m -> System.out.println("  Status: " + m));
         } catch (IllegalArgumentException e) {

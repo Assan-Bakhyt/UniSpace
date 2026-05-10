@@ -1,11 +1,14 @@
 package UniSpace.ui;
 
+import UniSpace.enums.Faculty;
 import UniSpace.exception.AuthenticationException;
+import UniSpace.exception.ValidationException;
 import UniSpace.model.user.Admin;
 import UniSpace.model.user.Manager;
 import UniSpace.model.user.Student;
 import UniSpace.model.user.Teacher;
 import UniSpace.model.user.User;
+import UniSpace.patterns.UserFactory;
 import UniSpace.service.AuthService;
 import UniSpace.service.CourseService;
 import UniSpace.service.MarkService;
@@ -33,6 +36,7 @@ public class LoginMenu {
         while (true) {
             printHeader();
             System.out.println("  1. Login");
+            System.out.println("  2. Register (new student)");
             System.out.println("  0. Exit");
             System.out.print("\n  Choose: ");
 
@@ -40,6 +44,7 @@ public class LoginMenu {
 
             switch (choice) {
                 case "1" -> attemptLogin();
+                case "2" -> register();
                 case "0" -> {
                     System.out.println("\n  Goodbye!");
                     return;
@@ -50,6 +55,64 @@ public class LoginMenu {
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    private void register() {
+        System.out.println("\n  ── Student Registration ──");
+
+        System.out.print("  First name : ");
+        String firstName = scanner.nextLine().trim();
+
+        System.out.print("  Last name  : ");
+        String lastName = scanner.nextLine().trim();
+
+        System.out.print("  Email      : ");
+        String email = scanner.nextLine().trim();
+
+        System.out.print("  Password   : ");
+        String password = scanner.nextLine().trim();
+
+        if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || password.isEmpty()) {
+            System.out.println("  [ERROR] All fields are required.");
+            return;
+        }
+
+        // Pick faculty
+        Faculty[] faculties = Faculty.values();
+        System.out.println("\n  Select faculty:");
+        for (int i = 0; i < faculties.length; i++)
+            System.out.printf("  %d. %s%n", i + 1, faculties[i]);
+        System.out.print("  Choice: ");
+        Faculty faculty;
+        try {
+            int idx = Integer.parseInt(scanner.nextLine().trim()) - 1;
+            if (idx < 0 || idx >= faculties.length) { System.out.println("  [ERROR] Invalid faculty."); return; }
+            faculty = faculties[idx];
+        } catch (NumberFormatException e) {
+            System.out.println("  [ERROR] Invalid input.");
+            return;
+        }
+
+        // Pick year
+        System.out.print("  Year (1–4): ");
+        int year;
+        try {
+            year = Integer.parseInt(scanner.nextLine().trim());
+            if (year < 1 || year > 4) { System.out.println("  [ERROR] Year must be 1–4."); return; }
+        } catch (NumberFormatException e) {
+            System.out.println("  [ERROR] Invalid year.");
+            return;
+        }
+
+        try {
+            Student student = UserFactory.createStudent(firstName, lastName, email, password, year, faculty);
+            authService.registerUser(student);
+            System.out.println("\n  Registration successful!");
+            System.out.println("  Welcome, " + student.getFullName() + "! Your ID: " + student.getId());
+            System.out.println("  You can now login with your email and password.");
+        } catch (ValidationException e) {
+            System.out.println("  [ERROR] " + e.getMessage());
+        }
+    }
 
     private void attemptLogin() {
         System.out.println();

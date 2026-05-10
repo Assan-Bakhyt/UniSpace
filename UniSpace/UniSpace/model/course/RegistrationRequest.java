@@ -1,5 +1,7 @@
 package UniSpace.model.course;
 
+import UniSpace.enums.RequestStatus;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -8,8 +10,6 @@ import java.util.UUID;
 public class RegistrationRequest implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
-    public enum RequestStatus { PENDING, APPROVED, REJECTED } // Сделать Отдельный энам
 
     private String        requestId;
     private String        studentId;

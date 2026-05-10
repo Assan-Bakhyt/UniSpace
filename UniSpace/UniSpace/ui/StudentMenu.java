@@ -188,7 +188,7 @@ public class StudentMenu {
         if (course == null) return;
         
         java.util.List<String> rows = new java.util.ArrayList<>();
-        for (String tid : course.getInstructors()) {
+        for (String tid : course.getInstructorIds()) {
             User u = AuthService.getInstance().getUserById(tid);
             if (u instanceof Teacher t) {
                 rows.add(String.format("%-10s %-20s %s (Rating: %.1f)", t.getId(), t.getFullName(), t.getTitle(), t.getRating()));
