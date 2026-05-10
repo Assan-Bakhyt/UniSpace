@@ -14,10 +14,10 @@ import java.util.*;
  *
  * Data is kept in plain in-memory maps — no DB layer required for Part B.
  *
- * studentCourses   : studentId  → list of enrolled course codes
- * studentCredits   : studentId  → total enrolled credits
- * failCounts       : studentId:courseCode → number of times failed
- * courseMarks      : studentId:courseCode → Mark record
+ * studentCourses : studentId  → list of enrolled course codes
+ * studentCredits : studentId  → total enrolled credits
+ * failCounts : studentId:courseCode → number of times failed
+ * courseMarks : studentId:courseCode → Mark record
  */
 public class CourseService {
 

@@ -15,7 +15,7 @@ public class Teacher extends Employee implements Comparable<Teacher> {
     private TeacherTitle title;
     private List<Course> courses;
     private double rating;
-    private int    ratingCount;
+    private int ratingCount;
 
     public Teacher() {}
 
