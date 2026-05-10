@@ -140,6 +140,7 @@ public class DataRepository {
                 Faculty.CS, 120_000.0, ManagerType.DEPARTMENT);
 
         for (User u : new User[]{admin, professor, tutor, student4, student1, manager}) {
+            u.setPassword(UniSpace.util.Validator.hashPassword(u.getPassword()));
             users.put(u.getEmail(), u);
         }
         System.out.println("[Storage] Seeded " + users.size() + " default users.");
