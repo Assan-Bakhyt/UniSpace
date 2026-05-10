@@ -287,6 +287,19 @@ public class MarkService {
         return sb.toString();
     }
 
+    // ── Persistence support ───────────────────────────────────────────────────
+
+    public Map<String, Mark> getMarkStore() { return markStore; }
+
+    /**
+     * Restores all marks loaded from disk.
+     * Called by DataRepository after deserialization.
+     */
+    public void restoreMarks(Map<String, Mark> loaded) {
+        markStore.clear();
+        if (loaded != null) markStore.putAll(loaded);
+    }
+
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private String key(String studentId, String courseCode) {

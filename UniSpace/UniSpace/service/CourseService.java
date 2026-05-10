@@ -171,6 +171,28 @@ public class CourseService {
         return failCounts.getOrDefault(failKey(studentId, courseCode), 0);
     }
 
+    // ── Persistence support ───────────────────────────────────────────────────
+
+    public Map<String, Course>      getCourseMap()      { return courseMap; }
+    public Map<String, Set<String>> getStudentCourses() { return studentCourses; }
+    public Map<String, Integer>     getStudentCredits() { return studentCredits; }
+    public Map<String, Integer>     getFailCounts()     { return failCounts; }
+
+    /**
+     * Restores student enrollment and credit data loaded from disk.
+     * Called by DataRepository after deserialization.
+     */
+    public void restoreStudentData(Map<String, Set<String>> sc,
+                                   Map<String, Integer>     credits,
+                                   Map<String, Integer>     fails) {
+        studentCourses.clear();
+        studentCredits.clear();
+        failCounts.clear();
+        if (sc      != null) studentCourses.putAll(sc);
+        if (credits != null) studentCredits.putAll(credits);
+        if (fails   != null) failCounts.putAll(fails);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String failKey(String studentId, String courseCode) {

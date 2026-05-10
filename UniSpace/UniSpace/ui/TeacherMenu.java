@@ -181,6 +181,7 @@ public class TeacherMenu {
         }
         teacher.activateResearcher();
         researchService.addResearcher(teacher.getResearcherProfile());
+        UniSpace.storage.DataRepository.getInstance().save();
         System.out.println("  Researcher role activated successfully.");
     }
 

@@ -140,6 +140,25 @@ public class LogService implements Serializable, Observer {
         log("SYSTEM", fromName, message);
     }
 
+    // ── Persistence support ───────────────────────────────────────────────────
+
+    public List<LogEntry> getLogsForStore() {
+        return new ArrayList<>(logs);
+    }
+
+    public void restoreLogs(List<LogEntry> saved) {
+        logs.clear();
+        long maxId = 0;
+        for (LogEntry e : saved) {
+            logs.add(e);
+            try {
+                long num = Long.parseLong(e.getId().replace("LOG-", ""));
+                if (num > maxId) maxId = num;
+            } catch (NumberFormatException ignored) {}
+        }
+        idCounter.set(maxId);
+    }
+
     @Override
     public String toString() {
         return "LogService [totalLogs=" + logs.size() + "]";

@@ -101,6 +101,7 @@ public class ResearcherMenu {
         int year  = UniSpace.util.ConsoleHelper.readInt(scanner, "  Year published: ");
 
         researchService.addPaperToResearcher(currentResearcher, title, journal, doi, pages, year);
+        UniSpace.storage.DataRepository.getInstance().save();
         System.out.println("  Paper added successfully.");
     }
 
@@ -109,6 +110,7 @@ public class ResearcherMenu {
         System.out.print("  Project topic: ");
         String topic = scanner.nextLine().trim();
         researchService.createProject(currentResearcher, topic);
+        UniSpace.storage.DataRepository.getInstance().save();
         System.out.println("  Project created successfully.");
     }
 
@@ -119,6 +121,7 @@ public class ResearcherMenu {
         String topic = scanner.nextLine().trim();
         try {
             researchService.joinProject(currentResearcher, topic);
+            UniSpace.storage.DataRepository.getInstance().save();
             System.out.println("  Successfully joined the project.");
         } catch (Exception e) {
             System.out.println("  [ERROR] " + e.getMessage());
