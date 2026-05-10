@@ -2,7 +2,7 @@ package UniSpace.service;
 
 import UniSpace.exception.CourseRegistrationException;
 import UniSpace.model.course.RegistrationRequest;
-import UniSpace.model.course.RegistrationRequest.RequestStatus;
+import UniSpace.enums.RequestStatus;
 
 import java.util.ArrayList;
 import java.util.Collections;

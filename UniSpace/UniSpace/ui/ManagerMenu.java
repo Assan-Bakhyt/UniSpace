@@ -2,10 +2,13 @@ package UniSpace.ui;
 
 import UniSpace.enums.Faculty;
 import UniSpace.exception.CourseRegistrationException;
+import UniSpace.exception.HIndexException;
 import UniSpace.exception.ValidationException;
 import UniSpace.model.course.Course;
 import UniSpace.model.course.RegistrationRequest;
 import UniSpace.model.news.News;
+import UniSpace.model.research.ResearcherProfile;
+import UniSpace.model.user.Employee;
 import UniSpace.model.user.Manager;
 import UniSpace.model.user.Student;
 import UniSpace.model.user.Teacher;
@@ -59,6 +62,7 @@ public class ManagerMenu {
                 case "6" -> manageNews();
                 case "7" -> viewInbox();
                 case "8" -> sendMessage();
+                case "9" -> assignSupervisor();
                 case "0" -> running = false;
                 default  -> System.out.println("  Invalid option.");
             }
@@ -255,7 +259,7 @@ public class ManagerMenu {
             switch (scanner.nextLine().trim()) {
                 case "1" -> listStudents(Comparator.comparingDouble(
                         s -> -markService.getGpa(s.getId())));
-                case "2" -> listStudents(Comparator.comparing(User::getLastName)
+                case "2" -> listStudents(Comparator.<Student, String>comparing(User::getLastName)
                         .thenComparing(User::getFirstName));
                 case "3" -> listStudentsByFaculty();
                 case "4" -> viewStudentDetails();
@@ -325,7 +329,7 @@ public class ManagerMenu {
             switch (scanner.nextLine().trim()) {
                 case "1" -> listTeachers(Comparator.comparingDouble(
                         (Teacher t) -> t.getRating()).reversed());
-                case "2" -> listTeachers(Comparator.comparing(User::getLastName)
+                case "2" -> listTeachers(Comparator.<Teacher, String>comparing(User::getLastName)
                         .thenComparing(User::getFirstName));
                 case "3" -> viewTeacherDetails();
                 case "0" -> back = true;
@@ -535,6 +539,88 @@ public class ManagerMenu {
     }
 
     // ══════════════════════════════════════════════════════════════════════════
+    //  9. ASSIGN RESEARCH SUPERVISOR
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void assignSupervisor() {
+        // List 4th-year students
+        List<Student> fourthYear = getAllStudents().stream()
+                .filter(s -> s.getYear() == 4)
+                .collect(Collectors.toList());
+
+        if (fourthYear.isEmpty()) {
+            System.out.println("  No 4th-year students found.");
+            return;
+        }
+
+        System.out.println("\n  ── 4th-Year Students ──");
+        System.out.printf("  %-8s %-24s %s%n", "ID", "Name", "Current Supervisor");
+        System.out.println("  " + "─".repeat(60));
+        for (Student s : fourthYear) {
+            String sup = s.getSupervisor() != null ? s.getSupervisor().getName() : "None";
+            System.out.printf("  %-8s %-24s %s%n", s.getId(), s.getFullName(), sup);
+        }
+
+        System.out.print("  Student ID: ");
+        String studentId = scanner.nextLine().trim();
+        User u = authService.getUserById(studentId);
+        if (!(u instanceof Student student) || student.getYear() != 4) {
+            System.out.println("  [ERROR] Not a valid 4th-year student ID.");
+            return;
+        }
+
+        // List available researchers
+        List<User> researcherUsers = authService.getAllUsers().values().stream()
+                .filter(user -> {
+                    if (user instanceof Employee e) return e.isResearcher();
+                    if (user instanceof Student s)  return s.isResearcher();
+                    return false;
+                })
+                .collect(Collectors.toList());
+
+        if (researcherUsers.isEmpty()) {
+            System.out.println("  No researchers available in the system.");
+            return;
+        }
+
+        System.out.println("\n  ── Available Researchers ──");
+        System.out.printf("  %-8s %-24s %s%n", "ID", "Name", "h-index");
+        System.out.println("  " + "─".repeat(45));
+        for (User r : researcherUsers) {
+            ResearcherProfile rp = getProfile(r);
+            if (rp != null)
+                System.out.printf("  %-8s %-24s %d%n", r.getId(), r.getFullName(), rp.getHIndex());
+        }
+
+        System.out.print("  Researcher ID: ");
+        String researcherId = scanner.nextLine().trim();
+        User ru = authService.getUserById(researcherId);
+        ResearcherProfile rp = getProfile(ru);
+
+        if (rp == null) {
+            System.out.println("  [ERROR] User is not a researcher.");
+            return;
+        }
+
+        try {
+            student.setSupervisor(rp);
+            DataRepository.getInstance().save();
+            System.out.println("  Supervisor assigned: " + ru.getFullName()
+                    + " (h-index: " + rp.getHIndex() + ") → " + student.getFullName());
+        } catch (HIndexException e) {
+            System.out.println("  [ERROR] " + e.getMessage());
+        } catch (ValidationException e) {
+            System.out.println("  [ERROR] " + e.getMessage());
+        }
+    }
+
+    private ResearcherProfile getProfile(User u) {
+        if (u instanceof Employee e) return e.getResearcherProfile();
+        if (u instanceof Student s)  return s.getResearcherProfile();
+        return null;
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
     //  HELPERS
     // ══════════════════════════════════════════════════════════════════════════
 
@@ -554,6 +640,7 @@ public class ManagerMenu {
         System.out.println("   7. View Inbox"
                 + (messageService.hasMessages(manager.getId()) ? " (new)" : ""));
         System.out.println("   8. Send Message");
+        System.out.println("   9. Assign research supervisor (4th-year students)");
         System.out.println("   0. Logout");
         System.out.print("  Choice: ");
     }

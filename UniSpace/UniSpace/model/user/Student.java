@@ -23,7 +23,7 @@ public class Student extends User implements Comparable<Student> {
                    String email, String password,
                    int year, Faculty faculty) {
         super(id, firstName, lastName, email, password, UserRole.STUDENT);
-        this.year    = year;
+        setYear(year);
         this.faculty = faculty;
     }
 
@@ -67,7 +67,11 @@ public class Student extends User implements Comparable<Student> {
     // ── Getters / setters ─────────────────────────────────────────────────────
 
     public int     getYear()             { return year; }
-    public void    setYear(int year)     { this.year = year; }
+    public void    setYear(int year) {
+        if (year < 1 || year > 4)
+            throw new IllegalArgumentException("Student year must be 1–4, got: " + year);
+        this.year = year;
+    }
     public void    setFaculty(Faculty f) { this.faculty = f; }
     public double getGpa() {
         return UniSpace.service.MarkService.getInstance().getGpa(this.getId());
