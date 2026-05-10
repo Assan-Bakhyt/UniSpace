@@ -15,6 +15,10 @@ public interface Researcher {
     int getHIndex();
     List<ResearchPaper> getResearchPapers();
 
+    void addResearchPaper(ResearchPaper paper);
+    void addResearchProject(ResearchProject project);
+    List<ResearchProject> getResearchProjects();
+
     default void printPapers(Comparator<ResearchPaper> comparator) {
         List<ResearchPaper> papers = new ArrayList<>(getResearchPapers());
         papers.sort(comparator);

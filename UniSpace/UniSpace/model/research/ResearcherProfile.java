@@ -20,6 +20,8 @@ public class ResearcherProfile implements Researcher, Serializable {
     private final User owner;
     private int hIndex;
     private final List<ResearchPaper> papers = new ArrayList<>();
+    private final List<ResearchProject> projects = new ArrayList<>();
+
 
     public ResearcherProfile(User owner) {
         this.owner = owner;
@@ -53,8 +55,19 @@ public class ResearcherProfile implements Researcher, Serializable {
         this.hIndex = hIndex;
     }
 
-    public void addPaper(ResearchPaper paper) {
+    @Override
+    public void addResearchPaper(ResearchPaper paper) {
         if (!papers.contains(paper)) papers.add(paper);
+    }
+
+    @Override
+    public void addResearchProject(ResearchProject project) {
+        if (!projects.contains(project)) projects.add(project);
+    }
+
+    @Override
+    public List<ResearchProject> getResearchProjects() {
+        return Collections.unmodifiableList(projects);
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────────

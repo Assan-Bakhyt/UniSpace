@@ -12,11 +12,13 @@ import java.io.Serializable;
  */
 public abstract class Employee extends User implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     private Faculty           department;
     private double            salary;
 
-    // ── Researcher role (optional for any Employee) ───────────────────────────
-    private boolean           isResearcher;
+    // Было: два поля — boolean isResearcher + ResearcherProfile researcherProfile
+    // Стало: только researcherProfile — истина определяется через != null
     private ResearcherProfile researcherProfile;
 
     public Employee() {}
@@ -41,14 +43,19 @@ public abstract class Employee extends User implements Serializable {
 
     // ── Researcher role ───────────────────────────────────────────────────────
 
-    public boolean isResearcher() { return isResearcher; }
+    /**
+     * Было return isResearcher;
+     * Стало: определяется наличием профиля — один источник правды.
+     */
+    public boolean isResearcher() {
+        return researcherProfile != null;
+    }
 
     /**
      * Grants researcher role — creates a ResearcherProfile. Idempotent.
      */
     public void activateResearcher() {
         if (researcherProfile == null) researcherProfile = new ResearcherProfile(this);
-        isResearcher = true;
     }
 
     /**
@@ -56,8 +63,11 @@ public abstract class Employee extends User implements Serializable {
      * Subclasses may override to add restrictions (e.g., professors can't lose status).
      */
     public void setResearcher(boolean researcher) {
-        this.isResearcher = researcher;
-        if (!researcher) researcherProfile = null;
+        if (researcher) {
+            activateResearcher(); // создаёт профиль если нет
+        } else {
+            researcherProfile = null; // удаляет профиль
+        }
     }
 
     public ResearcherProfile getResearcherProfile() { return researcherProfile; }
