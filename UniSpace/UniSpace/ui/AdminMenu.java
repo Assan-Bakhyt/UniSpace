@@ -14,6 +14,7 @@ import UniSpace.enums.UserRole;
 import UniSpace.enums.Faculty;
 import UniSpace.enums.TeacherTitle;
 import UniSpace.enums.ManagerType;
+import UniSpace.storage.DataRepository;
 import UniSpace.util.Validator;
 
 import java.util.Scanner;
@@ -647,10 +648,9 @@ public class AdminMenu {
 
         if (success) {
             System.out.println("Complaint " + action + " successfully.");
-
-            // Log the action
             logService.log(admin.getId(), admin.getFullName(),
                     action + " complaint: " + selectedComplaint.getId());
+            DataRepository.getInstance().save();
         } else {
             System.out.println("Failed to update complaint status.");
         }

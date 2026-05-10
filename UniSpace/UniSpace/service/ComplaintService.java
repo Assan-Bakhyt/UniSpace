@@ -214,6 +214,25 @@ public class ComplaintService implements Serializable {
         return getPendingComplaints().size();
     }
 
+    // ── Persistence support ───────────────────────────────────────────────────
+
+    public List<Complaint> getComplaintsForStore() {
+        return new ArrayList<>(complaints.values());
+    }
+
+    public void restoreComplaints(List<Complaint> saved) {
+        complaints.clear();
+        long maxId = 0;
+        for (Complaint c : saved) {
+            complaints.put(c.getId(), c);
+            try {
+                long num = Long.parseLong(c.getId().replace("COMP-", ""));
+                if (num > maxId) maxId = num;
+            } catch (NumberFormatException ignored) {}
+        }
+        idCounter.set(maxId);
+    }
+
     @Override
     public String toString() {
         return "ComplaintService [totalComplaints=" + complaints.size() +

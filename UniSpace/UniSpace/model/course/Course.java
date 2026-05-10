@@ -1,5 +1,7 @@
 package UniSpace.model.course;
 
+import UniSpace.enums.Faculty;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,6 +18,11 @@ public class Course implements Serializable {
     private String       name;
     private int          credits;
     private String       description;
+
+    /** Target audience — null means open to all faculties. */
+    private Faculty targetFaculty;
+    /** Target year of study (1–4). 0 means open to all years. */
+    private int     targetYear;
 
     /** All lessons that belong to this course */
     private List<Lesson> lessons      = new ArrayList<>();
@@ -78,12 +85,20 @@ public class Course implements Serializable {
     public String getDescription()              { return description; }
     public void   setDescription(String desc)   { this.description = desc; }
 
+    public Faculty getTargetFaculty()                  { return targetFaculty; }
+    public void    setTargetFaculty(Faculty faculty)   { this.targetFaculty = faculty; }
+
+    public int     getTargetYear()                     { return targetYear; }
+    public void    setTargetYear(int year)             { this.targetYear = year; }
+
     // ── Object overrides ──────────────────────────────────────────────────────
 
     @Override
     public String toString() {
-        return String.format("Course{code='%s', name='%s', credits=%d, instructors=%s}",
-                courseCode, name, credits, instructorIds);
+        String target = (targetFaculty != null ? " | For: " + targetFaculty : "")
+                + (targetYear > 0 ? " Y" + targetYear : "");
+        return String.format("Course{code='%s', name='%s', credits=%d, instructors=%s%s}",
+                courseCode, name, credits, instructorIds, target);
     }
 
     @Override

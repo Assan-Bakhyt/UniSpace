@@ -7,11 +7,14 @@ import UniSpace.model.course.Mark;
 import UniSpace.model.user.Student;
 import UniSpace.model.user.Teacher;
 import UniSpace.model.user.User;
+import UniSpace.model.course.RegistrationRequest;
 import UniSpace.service.AuthService;
 import UniSpace.service.CourseService;
 import UniSpace.service.MarkService;
 import UniSpace.service.MessageService;
+import UniSpace.service.RegistrationService;
 import UniSpace.service.ResearchService;
+import UniSpace.storage.DataRepository;
 
 import java.util.List;
 import java.util.Scanner;
@@ -70,8 +73,11 @@ public class StudentMenu {
         System.out.print("  Course code: ");
         String code = scanner.nextLine().trim();
         try {
-            courseService.registerStudentForCourse(student.getId(), code);
-            System.out.println("  Registered for " + code);
+            RegistrationRequest req = RegistrationService.getInstance()
+                    .submitRequest(student.getId(), code);
+            DataRepository.getInstance().save();
+            System.out.println("  Request submitted — awaiting manager approval.");
+            System.out.println("  Request ID: " + req.getRequestId().substring(0, 8) + "...");
         } catch (CourseRegistrationException e) {
             System.out.println("  [ERROR] " + e.getMessage());
         }
@@ -132,6 +138,7 @@ public class StudentMenu {
         if (u instanceof Teacher teacher) {
             try {
                 teacher.addRating(rating);
+                DataRepository.getInstance().save();
                 System.out.printf("  Rating %.1f submitted for %s.%n", rating, teacher.getFullName());
             } catch (ValidationException e) {
                 System.out.println("  [ERROR] " + e.getMessage());
@@ -162,6 +169,7 @@ public class StudentMenu {
         if (!"y".equalsIgnoreCase(scanner.nextLine().trim())) return;
         student.activateResearcher();
         researchService.addResearcher(student.getResearcherProfile());
+        DataRepository.getInstance().save();
         System.out.println("  Researcher role activated.");
     }
 

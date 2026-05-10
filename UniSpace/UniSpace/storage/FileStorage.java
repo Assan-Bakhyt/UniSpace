@@ -11,8 +11,10 @@ public class FileStorage {
     private FileStorage() {}
 
     public static void save(Serializable data, String path) {
+        File file = new File(path);
+        if (file.getParentFile() != null) file.getParentFile().mkdirs();
         try (ObjectOutputStream oos = new ObjectOutputStream(
-                new BufferedOutputStream(new FileOutputStream(path)))) {
+                new BufferedOutputStream(new FileOutputStream(file)))) {
             oos.writeObject(data);
         } catch (IOException e) {
             System.err.println("[Storage] Save failed: " + e.getMessage());

@@ -10,6 +10,8 @@ import UniSpace.service.AuthService;
 import UniSpace.service.CourseService;
 import UniSpace.service.MarkService;
 import UniSpace.service.MessageService;
+import UniSpace.service.NewsService;
+import UniSpace.service.RegistrationService;
 import UniSpace.service.ResearchService;
 
 import java.util.Scanner;
@@ -79,10 +81,12 @@ public class LoginMenu {
      * All UI–service wiring lives here — model classes stay free of UI imports.
      */
     private void dispatchMenu(User user) {
-        CourseService    courseService    = CourseService.getInstance();
-        MarkService      markService      = MarkService.getInstance();
-        ResearchService  researchService  = ResearchService.getInstance();
-        MessageService   messageService   = MessageService.getInstance();
+        CourseService       courseService       = CourseService.getInstance();
+        MarkService         markService         = MarkService.getInstance();
+        ResearchService     researchService     = ResearchService.getInstance();
+        MessageService      messageService      = MessageService.getInstance();
+        RegistrationService registrationService = RegistrationService.getInstance();
+        NewsService         newsService         = NewsService.getInstance();
 
         if (user instanceof Student s) {
             new StudentMenu(s, courseService, markService, researchService, messageService).show();
@@ -94,7 +98,8 @@ public class LoginMenu {
             new AdminMenu(a).show();
 
         } else if (user instanceof Manager m) {
-            new ManagerMenu(m).show();
+            new ManagerMenu(m, courseService, markService,
+                    registrationService, newsService, messageService).show();
         }
     }
 
