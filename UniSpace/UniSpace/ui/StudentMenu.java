@@ -53,7 +53,8 @@ public class StudentMenu {
                 case "6" -> rateTeacher();
                 case "7" -> viewInbox();
                 case "8" -> sendMessage();
-                case "9" -> {
+                case "9" -> viewTeacherInfo();
+                case "10" -> {
                     if (!student.isResearcher()) activateResearcherRole();
                     if (student.isResearcher()) openResearcherMode();
                 }
@@ -112,23 +113,31 @@ public class StudentMenu {
     }
 
     private void rateTeacher() {
-        System.out.print("  Teacher ID: ");
-        String teacherId = scanner.nextLine().trim();
-        System.out.print("  Rating (1–5): ");
-        try {
-            double rating = Double.parseDouble(scanner.nextLine().trim());
-            User u = AuthService.getInstance().getUserById(teacherId);
-            if (!(u instanceof Teacher)) {
-                System.out.println("  Teacher not found.");
-                return;
+        String courseCode = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Course code: ");
+        if (courseService.getStudentCourses(student.getId()).stream().noneMatch(c -> c.getCourseCode().equals(courseCode))) {
+            System.out.println("  [ERROR] You are not registered for this course.");
+            return;
+        }
+
+        String teacherId = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Teacher ID: ");
+        
+        Course course = courseService.findCourse(courseCode).orElse(null);
+        if (course == null || !course.hasInstructor(teacherId)) {
+            System.out.println("  [ERROR] Teacher is not an instructor for this course.");
+            return;
+        }
+
+        double rating = UniSpace.util.ConsoleHelper.readDouble(scanner, "  Rating (1–5): ");
+        User u = AuthService.getInstance().getUserById(teacherId);
+        if (u instanceof Teacher teacher) {
+            try {
+                teacher.addRating(rating);
+                System.out.printf("  Rating %.1f submitted for %s.%n", rating, teacher.getFullName());
+            } catch (ValidationException e) {
+                System.out.println("  [ERROR] " + e.getMessage());
             }
-            Teacher teacher = (Teacher) u;
-            teacher.addRating(rating);
-            System.out.printf("  Rating %.1f submitted for %s.%n", rating, teacher.getFullName());
-        } catch (NumberFormatException e) {
-            System.out.println("  [ERROR] Invalid rating value.");
-        } catch (ValidationException e) {
-            System.out.println("  [ERROR] " + e.getMessage());
+        } else {
+            System.out.println("  [ERROR] Teacher not found.");
         }
     }
 
@@ -160,6 +169,26 @@ public class StudentMenu {
         new ResearcherMenu(student.getFaculty(), researchService).show();
     }
 
+    private void viewTeacherInfo() {
+        String courseCode = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Course code: ");
+        if (courseService.getStudentCourses(student.getId()).stream().noneMatch(c -> c.getCourseCode().equals(courseCode))) {
+            System.out.println("  [ERROR] You are not registered for this course.");
+            return;
+        }
+        
+        Course course = courseService.findCourse(courseCode).orElse(null);
+        if (course == null) return;
+        
+        java.util.List<String> rows = new java.util.ArrayList<>();
+        for (String tid : course.getInstructors()) {
+            User u = AuthService.getInstance().getUserById(tid);
+            if (u instanceof Teacher t) {
+                rows.add(String.format("%-10s %-20s %s (Rating: %.1f)", t.getId(), t.getFullName(), t.getTitle(), t.getRating()));
+            }
+        }
+        UniSpace.util.ConsoleHelper.printTable("Instructors for " + courseCode, rows);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void printMenu() {
@@ -175,7 +204,8 @@ public class StudentMenu {
         System.out.println("   6. Rate a teacher");
         System.out.println("   7. View inbox");
         System.out.println("   8. Send message");
-        System.out.println("   9. Researcher mode" + (isRes ? "" : " [not available]"));
+        System.out.println("   9. View teacher info for a course");
+        System.out.println("   10. Researcher mode" + (isRes ? "" : " [not available]"));
         System.out.println("   0. Exit");
         System.out.print("  Choice: ");
     }
