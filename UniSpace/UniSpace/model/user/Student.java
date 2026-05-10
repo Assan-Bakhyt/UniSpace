@@ -13,7 +13,6 @@ public class Student extends User implements Comparable<Student> {
 
     private int     year;
     private Faculty faculty;
-    private double  gpa;
 
     private ResearcherProfile researcherProfile;
     private ResearcherProfile supervisor;
@@ -70,19 +69,20 @@ public class Student extends User implements Comparable<Student> {
     public int     getYear()             { return year; }
     public void    setYear(int year)     { this.year = year; }
     public void    setFaculty(Faculty f) { this.faculty = f; }
-    public double  getGpa()             { return gpa; }
-    public void    setGpa(double gpa)   { this.gpa = gpa; }
+    public double getGpa() {
+        return UniSpace.service.MarkService.getInstance().getGpa(this.getId());
+    }
 
     // ── Comparable: descending GPA ────────────────────────────────────────────
 
     @Override
     public int compareTo(Student other) {
-        return Double.compare(other.gpa, this.gpa);
+        return Double.compare(other.getGpa(), this.getGpa());
     }
 
     @Override
     public String toString() {
         return super.toString() + String.format(
-                " | Year: %d | Faculty: %s | GPA: %.2f", year, faculty, gpa);
+                " | Year: %d | Faculty: %s | GPA: %.2f", year, faculty, getGpa());
     }
 }

@@ -45,7 +45,8 @@ public class TeacherMenu {
                 case "3" -> viewCourseMarks();
                 case "4" -> viewInbox();
                 case "5" -> sendMessage();
-                case "6" -> {
+                case "6" -> viewCourseStudents();
+                case "7" -> {
                     if (teacher.isResearcher()) openResearcherMode();
                     else System.out.println("  You are not a researcher.");
                 }
@@ -68,21 +69,17 @@ public class TeacherMenu {
     }
 
     private void putMark() {
-        System.out.print("  Student ID: ");
-        String studentId = scanner.nextLine().trim();
-        System.out.print("  Course code: ");
-        String courseCode = scanner.nextLine().trim();
-        System.out.print("  Component (1=att1 / 2=att2 / 3=final): ");
-        String comp = scanner.nextLine().trim();
-        System.out.print("  Score: ");
+        String studentId = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Student ID: ");
+        String courseCode = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Course code: ");
 
-        double score;
-        try {
-            score = Double.parseDouble(scanner.nextLine().trim());
-        } catch (NumberFormatException e) {
-            System.out.println("  [ERROR] Invalid score.");
+        if (courseService.getCoursesByInstructor(teacher.getId()).stream().noneMatch(c -> c.getCourseCode().equals(courseCode))) {
+            System.out.println("  [ERROR] You are not teaching this course.");
             return;
         }
+
+        String comp = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Component (1=att1 / 2=att2 / 3=final): ");
+        double score = UniSpace.util.ConsoleHelper.readDouble(scanner, "  Score: ");
+
 
         try {
             switch (comp) {
@@ -125,6 +122,24 @@ public class TeacherMenu {
         new ResearcherMenu(teacher.getFaculty(), researchService).show();
     }
 
+    private void viewCourseStudents() {
+        String courseCode = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Course code: ");
+        if (courseService.getCoursesByInstructor(teacher.getId()).stream().noneMatch(c -> c.getCourseCode().equals(courseCode))) {
+            System.out.println("  [ERROR] You are not teaching this course.");
+            return;
+        }
+
+        java.util.List<String> rows = new java.util.ArrayList<>();
+        for (UniSpace.model.user.User u : UniSpace.storage.DataRepository.getInstance().getUsers().values()) {
+            if (u instanceof UniSpace.model.user.Student s) {
+                if (courseService.getStudentCourses(s.getId()).stream().anyMatch(c -> c.getCourseCode().equals(courseCode))) {
+                    rows.add(String.format("%-10s %s", s.getId(), s.getFullName()));
+                }
+            }
+        }
+        UniSpace.util.ConsoleHelper.printTable("Students in " + courseCode, rows);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void printMenu() {
@@ -137,7 +152,8 @@ public class TeacherMenu {
         System.out.println("   3. View all marks for a course");
         System.out.println("   4. View inbox");
         System.out.println("   5. Send message");
-        System.out.println("   6. Researcher mode" + (isRes ? "" : " [not available]"));
+        System.out.println("   6. View students in a course");
+        System.out.println("   7. Researcher mode" + (isRes ? "" : " [not available]"));
         System.out.println("   0. Exit");
         System.out.print("  Choice: ");
     }
