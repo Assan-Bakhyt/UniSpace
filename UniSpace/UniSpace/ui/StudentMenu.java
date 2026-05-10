@@ -166,7 +166,7 @@ public class StudentMenu {
     }
 
     private void openResearcherMode() {
-        new ResearcherMenu(student.getFaculty(), researchService).show();
+        new ResearcherMenu(student.getResearcherProfile(), student.getFaculty(), researchService).show();
     }
 
     private void viewTeacherInfo() {

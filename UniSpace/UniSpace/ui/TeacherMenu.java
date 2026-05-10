@@ -7,6 +7,7 @@ import UniSpace.service.CourseService;
 import UniSpace.service.MarkService;
 import UniSpace.service.MessageService;
 import UniSpace.service.ResearchService;
+import UniSpace.enums.TeacherTitle;
 
 import java.util.List;
 import java.util.Scanner;
@@ -46,10 +47,7 @@ public class TeacherMenu {
                 case "4" -> viewInbox();
                 case "5" -> sendMessage();
                 case "6" -> viewCourseStudents();
-                case "7" -> {
-                    if (teacher.isResearcher()) openResearcherMode();
-                    else System.out.println("  You are not a researcher.");
-                }
+                case "7" -> handleResearcherOption();  // ← ИЗМЕНЕНО
                 case "0" -> running = false;
                 default  -> System.out.println("  Invalid option. Try again.");
             }
@@ -69,17 +67,18 @@ public class TeacherMenu {
     }
 
     private void putMark() {
-        String studentId = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Student ID: ");
+        String studentId  = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Student ID: ");
         String courseCode = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Course code: ");
 
-        if (courseService.getCoursesByInstructor(teacher.getId()).stream().noneMatch(c -> c.getCourseCode().equals(courseCode))) {
+        if (courseService.getCoursesByInstructor(teacher.getId()).stream()
+                .noneMatch(c -> c.getCourseCode().equals(courseCode))) {
             System.out.println("  [ERROR] You are not teaching this course.");
             return;
         }
 
-        String comp = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Component (1=att1 / 2=att2 / 3=final): ");
+        String comp  = UniSpace.util.ConsoleHelper.readNonEmpty(scanner,
+                "  Component (1=att1 / 2=att2 / 3=final): ");
         double score = UniSpace.util.ConsoleHelper.readDouble(scanner, "  Score: ");
-
 
         try {
             switch (comp) {
@@ -89,8 +88,8 @@ public class TeacherMenu {
                 default  -> { System.out.println("  [ERROR] Unknown component."); return; }
             }
             System.out.println("  Mark saved.");
-            markService.getMark(studentId, courseCode).ifPresent(m ->
-                    System.out.println("  Status: " + m));
+            markService.getMark(studentId, courseCode)
+                    .ifPresent(m -> System.out.println("  Status: " + m));
         } catch (IllegalArgumentException e) {
             System.out.println("  [ERROR] " + e.getMessage());
         }
@@ -114,25 +113,27 @@ public class TeacherMenu {
         String toId = scanner.nextLine().trim();
         System.out.print("  Message: ");
         String text = scanner.nextLine().trim();
-        boolean sent = messageService.send(teacher.getId(), teacher.getFullName(), toId, text);
-        System.out.println(sent ? "  Message sent." : "  [ERROR] Recipient not found or not online.");
-    }
-
-    private void openResearcherMode() {
-        new ResearcherMenu(teacher.getFaculty(), researchService).show();
+        boolean sent = messageService.send(
+                teacher.getId(), teacher.getFullName(), toId, text);
+        System.out.println(sent
+                ? "  Message sent."
+                : "  [ERROR] Recipient not found or not online.");
     }
 
     private void viewCourseStudents() {
         String courseCode = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Course code: ");
-        if (courseService.getCoursesByInstructor(teacher.getId()).stream().noneMatch(c -> c.getCourseCode().equals(courseCode))) {
+        if (courseService.getCoursesByInstructor(teacher.getId()).stream()
+                .noneMatch(c -> c.getCourseCode().equals(courseCode))) {
             System.out.println("  [ERROR] You are not teaching this course.");
             return;
         }
 
         java.util.List<String> rows = new java.util.ArrayList<>();
-        for (UniSpace.model.user.User u : UniSpace.storage.DataRepository.getInstance().getUsers().values()) {
+        for (UniSpace.model.user.User u :
+                UniSpace.storage.DataRepository.getInstance().getUsers().values()) {
             if (u instanceof UniSpace.model.user.Student s) {
-                if (courseService.getStudentCourses(s.getId()).stream().anyMatch(c -> c.getCourseCode().equals(courseCode))) {
+                if (courseService.getStudentCourses(s.getId()).stream()
+                        .anyMatch(c -> c.getCourseCode().equals(courseCode))) {
                     rows.add(String.format("%-10s %s", s.getId(), s.getFullName()));
                 }
             }
@@ -140,12 +141,74 @@ public class TeacherMenu {
         UniSpace.util.ConsoleHelper.printTable("Students in " + courseCode, rows);
     }
 
+    // ── Researcher logic ──────────────────────────────────────────────────────
+
+    /**
+     * Единая точка входа для пункта 7:
+     * — Профессор: сразу открывает Researcher Mode (роль уже активна)
+     * — Не-профессор без роли: предлагает активировать
+     * — Не-профессор с ролью: открывает Researcher Mode
+     */
+    private void handleResearcherOption() {
+        if (teacher.getTitle() == TeacherTitle.PROFESSOR) {
+            // Профессор всегда researcher — сразу в меню
+            openResearcherMode();
+            return;
+        }
+
+        // Не-профессор
+        if (!teacher.isResearcher()) {
+            activateResearcherRole();
+        }
+
+        // Если после активации роль есть — открываем меню
+        if (teacher.isResearcher()) {
+            openResearcherMode();
+        }
+    }
+
+    /**
+     * Активация researcher роли для не-профессоров.
+     * Только предлагает — не форсирует.
+     */
+    private void activateResearcherRole() {
+        System.out.println("\n  ── Activate Researcher Role ──");
+        System.out.println("  You are not a researcher yet.");
+        System.out.print("  Activate researcher role? (y/n): ");
+        if (!"y".equalsIgnoreCase(scanner.nextLine().trim())) {
+            System.out.println("  Cancelled.");
+            return;
+        }
+        teacher.activateResearcher();
+        researchService.addResearcher(teacher.getResearcherProfile());
+        System.out.println("  Researcher role activated successfully.");
+    }
+
+    private void openResearcherMode() {
+        new ResearcherMenu(
+                teacher.getResearcherProfile(),
+                teacher.getFaculty(),
+                researchService
+        ).show();
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void printMenu() {
-        boolean isRes = teacher.isResearcher();
+        boolean isRes      = teacher.isResearcher();
+        boolean isProfessor = teacher.getTitle() == TeacherTitle.PROFESSOR;
+
+        // Пункт 7 меняет текст в зависимости от состояния
+        String researcherLabel;
+        if (isProfessor || isRes) {
+            researcherLabel = "Researcher mode";
+        } else {
+            researcherLabel = "Activate researcher role";
+        }
+
         System.out.println("\n  ══════════════════════════════════════");
-        System.out.println("   Teacher Menu — " + teacher.getFullName());
+        System.out.println("   Teacher Menu — " + teacher.getFullName()
+                + " [" + teacher.getTitle() + "]");
         System.out.println("  ══════════════════════════════════════");
         System.out.println("   1. View my courses");
         System.out.println("   2. Enter / update a mark");
@@ -153,7 +216,7 @@ public class TeacherMenu {
         System.out.println("   4. View inbox");
         System.out.println("   5. Send message");
         System.out.println("   6. View students in a course");
-        System.out.println("   7. Researcher mode" + (isRes ? "" : " [not available]"));
+        System.out.printf ("   7. %s%n", researcherLabel);
         System.out.println("   0. Exit");
         System.out.print("  Choice: ");
     }

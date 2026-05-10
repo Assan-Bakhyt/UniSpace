@@ -11,17 +11,23 @@ import java.util.UUID;
 
 public class ResearchProject implements Serializable {
 
-    private final String projectId = UUID.randomUUID().toString();
+    private static final long serialVersionUID = 1L;
+
+    // БЫЛО: private final String projectId = UUID.randomUUID().toString();
+    // СТАЛО: инициализируется в конструкторе — корректно восстанавливается при десериализации
+    private final String projectId;
     private String topic;
-    private List<ResearchPaper> publishedPapers;
-    private List<Researcher>    participants;
+    private List<ResearchPaper>  publishedPapers;
+    private List<Researcher>     participants;
 
     public ResearchProject() {
+        this.projectId       = UUID.randomUUID().toString();
         this.publishedPapers = new ArrayList<>();
         this.participants    = new ArrayList<>();
     }
 
     public ResearchProject(String topic) {
+        this.projectId       = UUID.randomUUID().toString();
         this.topic           = topic;
         this.publishedPapers = new ArrayList<>();
         this.participants    = new ArrayList<>();
@@ -31,7 +37,6 @@ public class ResearchProject implements Serializable {
 
     /**
      * Adds a person to the project.
-     *
      * @throws NonResearcherJoinException if the given object is not a Researcher
      */
     public void joinProject(Object person) throws NonResearcherJoinException {
@@ -47,20 +52,22 @@ public class ResearchProject implements Serializable {
     // ── Papers ────────────────────────────────────────────────────────────────
 
     public void addPublishedPaper(ResearchPaper paper) {
-        if (!publishedPapers.contains(paper)) publishedPapers.add(paper);
+        if (paper != null && !publishedPapers.contains(paper))
+            publishedPapers.add(paper);
     }
 
     // ── Getters ───────────────────────────────────────────────────────────────
 
-    public String             getProjectId()       { return projectId; }
-    public String             getTopic()           { return topic; }
-    public void               setTopic(String t)   { this.topic = t; }
+    public String              getProjectId()     { return projectId; }
+
+    public String              getTopic()         { return topic; }
+    public void                setTopic(String t) { this.topic = t; }
 
     public List<ResearchPaper> getPublishedPapers() {
         return Collections.unmodifiableList(publishedPapers);
     }
 
-    public List<Researcher> getParticipants() {
+    public List<Researcher>    getParticipants() {
         return Collections.unmodifiableList(participants);
     }
 
