@@ -21,7 +21,7 @@ import java.util.Map;
 public class DataRepository {
 
     private static DataRepository instance;
-    private static final String FILE = "resources/data/files/unispace_data.ser";
+    private static final String FILE = "UniSpace/resources/data/unispace_data.ser";
 
     private Map<String, User> users;
 
