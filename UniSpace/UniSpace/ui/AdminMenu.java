@@ -1,12 +1,15 @@
 package UniSpace.ui;
 
+import UniSpace.model.course.Mark;
 import UniSpace.model.user.Admin;
-import UniSpace.model.user.User;
+import UniSpace.model.user.Manager;
 import UniSpace.model.user.Student;
 import UniSpace.model.user.Teacher;
-import UniSpace.model.user.Manager;
+import UniSpace.model.user.User;
 import UniSpace.service.AuthService;
+import UniSpace.service.CourseService;
 import UniSpace.service.LogService;
+import UniSpace.service.MarkService;
 import UniSpace.service.ComplaintService;
 import UniSpace.model.log.LogEntry;
 import UniSpace.model.complaint.Complaint;
@@ -15,27 +18,18 @@ import UniSpace.enums.Faculty;
 import UniSpace.enums.TeacherTitle;
 import UniSpace.enums.ManagerType;
 import UniSpace.storage.DataRepository;
+import UniSpace.util.Colors;
+import UniSpace.util.ConsoleHelper;
+import UniSpace.util.Paginator;
 import UniSpace.util.Validator;
 
-import java.util.Scanner;
-import java.util.Map;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 import java.util.stream.Collectors;
 
-/**
- * Menu interface for Admin users.
- * Provides full administration capabilities including:
- * - User management (Add, Remove, Update)
- * - Viewing system logs (sorted)
- * - Managing complaints (sorted)
- * Implements logging for all admin actions.
- *
- * Design Patterns used:
- * - Singleton (via AuthService, LogService, ComplaintService)
- * - Facade (AdminMenu acts as a facade for complex subsystem operations)
- */
 public class AdminMenu {
 
     private final Admin admin;
@@ -44,11 +38,6 @@ public class AdminMenu {
     private final LogService logService;
     private final ComplaintService complaintService;
 
-    /**
-     * Creates a new AdminMenu for the specified admin.
-     *
-     * @param admin the admin user who will use this menu
-     */
     public AdminMenu(Admin admin) {
         this.admin = admin;
         this.authService = AuthService.getInstance();
@@ -56,603 +45,432 @@ public class AdminMenu {
         this.complaintService = ComplaintService.getInstance();
     }
 
-    /**
-     * Displays the admin menu and handles user interaction.
-     * Main entry point for admin functionality.
-     */
     public void show() {
-        System.out.println("\n=== ADMIN MENU — " + admin.getFullName() + " ===");
-
         boolean running = true;
         while (running) {
             printMenuOptions();
-            System.out.print("Select option (0-6): ");
-
-            String choice = scanner.nextLine().trim();
-
+            String choice = ConsoleHelper.readChoice(scanner);
             switch (choice) {
-                case "1":
-                    addUser();
-                    break;
-                case "2":
-                    removeUser();
-                    break;
-                case "3":
-                    updateUser();
-                    break;
-                case "4":
-                    viewLogs();
-                    break;
-                case "5":
-                    viewComplaints();
-                    break;
-                case "6":
-                    manageComplaints();
-                    break;
-                case "0":
-                    System.out.println("Exiting Admin Menu...");
-                    running = false;
-                    break;
-                default:
-                    System.out.println("Invalid option. Please try again.");
+                case "1" -> addUser();
+                case "2" -> removeUser();
+                case "3" -> updateUser();
+                case "4" -> viewLogs();
+                case "5" -> viewComplaints();
+                case "6" -> manageComplaints();
+                case "7" -> closeYear();
+                case "0" -> running = false;
+                default  -> System.out.println(Colors.red("  Invalid option. Try again."));
             }
         }
     }
 
-    /**
-     * Prints all available menu options for the admin.
-     */
     private void printMenuOptions() {
-        System.out.println("\n--- Admin Options ---");
-        System.out.println("1. Add User");
-        System.out.println("2. Remove User (by ID)");
-        System.out.println("3. Update User (by ID)");
-        System.out.println("4. View Logs (Sorted)");
-        System.out.println("5. View Complaints (Sorted)");
-        System.out.println("6. Manage Complaints");
-        System.out.println("0. Exit");
+        System.out.println(Colors.gray("\n  ══════════════════════════════════════"));
+        System.out.println(Colors.bold("   Admin Menu - " + admin.getFullName()));
+        System.out.println(Colors.gray("  ══════════════════════════════════════"));
+        System.out.println("   1. Add User");
+        System.out.println("   2. Remove User");
+        System.out.println("   3. Update User");
+        System.out.println("   4. View Logs");
+        System.out.println("   5. View Complaints");
+        System.out.println("   6. Manage Complaints");
+        System.out.println("   7. Close Academic Year");
+        System.out.println("   0. Logout");
+        System.out.print("  Choice: ");
     }
 
-    /**
-     * Adds a new user to the system.
-     * Prompts for user details and creates the appropriate user type.
-     * Validates email and password using Validator.
-     * Allows selecting Faculty and year/course level.
-     * Logs the action after completion.
-     */
+    // ══════════════════════════════════════════════════════════════════════════
+    //  1. ADD USER
+    // ══════════════════════════════════════════════════════════════════════════
+
     private void addUser() {
-        System.out.println("\n=== ADD USER ===");
+        System.out.println(Colors.purple("\n  ── Add User ──"));
 
-        System.out.print("Enter first name: ");
+        System.out.print("  First name: ");
         String firstName = scanner.nextLine().trim();
-
-        System.out.print("Enter last name: ");
+        System.out.print("  Last name: ");
         String lastName = scanner.nextLine().trim();
-
-        System.out.print("Enter email: ");
+        System.out.print("  Email: ");
         String email = scanner.nextLine().trim();
 
-        // Validate email
         if (!Validator.validateEmail(email)) {
-            System.out.println("Invalid email format. Please use a valid email address.");
+            System.out.println(Colors.red("  [ERROR] Invalid email format."));
             return;
         }
 
-        System.out.print("Enter password: ");
+        System.out.print("  Password: ");
         String password = scanner.nextLine().trim();
 
-        // Validate password
         if (!Validator.validatePassword(password)) {
-            System.out.println("Invalid password. Password must be at least 6 characters long.");
+            System.out.println(Colors.red("  [ERROR] Password must be at least 6 characters."));
             return;
         }
 
-        System.out.println("Select role:");
-        System.out.println("1. STUDENT");
-        System.out.println("2. TEACHER");
-        System.out.println("3. MANAGER");
-        System.out.println("4. ADMIN");
-        System.out.print("Choice (1-4): ");
+        System.out.println("  Role: 1=STUDENT  2=TEACHER  3=MANAGER  4=ADMIN");
+        System.out.print("  Choice: ");
         String roleChoice = scanner.nextLine().trim();
 
-        UserRole role;
-        switch (roleChoice) {
-            case "1":
-                role = UserRole.STUDENT;
-                break;
-            case "2":
-                role = UserRole.TEACHER;
-                break;
-            case "3":
-                role = UserRole.MANAGER;
-                break;
-            case "4":
-                role = UserRole.ADMIN;
-                break;
-            default:
-                System.out.println("Invalid role selected.");
-                return;
-        }
+        UserRole role = switch (roleChoice) {
+            case "1" -> UserRole.STUDENT;
+            case "2" -> UserRole.TEACHER;
+            case "3" -> UserRole.MANAGER;
+            case "4" -> UserRole.ADMIN;
+            default  -> null;
+        };
+        if (role == null) { System.out.println(Colors.red("  [ERROR] Invalid role.")); return; }
 
-        // Select Faculty
-        System.out.println("\nSelect Faculty:");
-        System.out.println("1. FIT (Faculty of Information Technology)");
-        System.out.println("2. CS (Computer Science)");
-        System.out.println("3. MATH (Mathematics)");
-        System.out.println("4. PHYSICS (Physics)");
-        System.out.println("5. BS (Business School)");
-        System.out.println("6. KMA (Kazakh Maritime Academy)");
-        System.out.println("7. ISE (International School of Economics)");
-        System.out.print("Choice (1-7): ");
-        String facultyChoice = scanner.nextLine().trim();
+        Faculty faculty = pickFaculty();
+        if (faculty == null) return;
 
-        Faculty faculty;
-        switch (facultyChoice) {
-            case "1":
-                faculty = Faculty.FIT;
-                break;
-            case "2":
-                faculty = Faculty.CS;
-                break;
-            case "3":
-                faculty = Faculty.MATH;
-                break;
-            case "4":
-                faculty = Faculty.PHYSICS;
-                break;
-            case "5":
-                faculty = Faculty.BS;
-                break;
-            case "6":
-                faculty = Faculty.KMA;
-                break;
-            case "7":
-                faculty = Faculty.ISE;
-                break;
-            default:
-                System.out.println("Invalid faculty selected. Defaulting to FIT.");
-                faculty = Faculty.FIT;
-        }
-
-        // Generate user ID
         String userId = "U-" + System.currentTimeMillis();
 
-        // Create user using factory or directly based on role
-        User newUser;
-        switch (role) {
-            case STUDENT:
-                System.out.print("Enter year of study (1-4): ");
+        User newUser = switch (role) {
+            case STUDENT -> {
+                System.out.print("  Year of study (1–4): ");
                 int year = 1;
-                try {
-                    year = Integer.parseInt(scanner.nextLine().trim());
-                    if (year < 1 || year > 4) {
-                        year = 1;
-                        System.out.println("Invalid year. Defaulting to 1.");
-                    }
-                } catch (NumberFormatException e) {
-                    System.out.println("Invalid input. Defaulting to year 1.");
-                }
-                newUser = new Student(userId, firstName, lastName, email, password, year, faculty);
-                break;
-            case TEACHER:
-                System.out.println("Select Teacher Title:");
-                System.out.println("1. TUTOR");
-                System.out.println("2. SENIOR_LECTOR");
-                System.out.println("3. LECTOR");
-                System.out.println("4. PROFESSOR");
-                System.out.print("Choice (1-4): ");
-                String titleChoice = scanner.nextLine().trim();
+                try { year = Integer.parseInt(scanner.nextLine().trim()); }
+                catch (NumberFormatException ignored) {}
+                if (year < 1 || year > 4) year = 1;
+                yield new Student(userId, firstName, lastName, email, password, year, faculty);
+            }
+            case TEACHER -> {
+                System.out.println("  Title: 1=TUTOR  2=SENIOR_LECTOR  3=LECTOR  4=PROFESSOR");
+                System.out.print("  Choice: ");
+                TeacherTitle title = switch (scanner.nextLine().trim()) {
+                    case "2" -> TeacherTitle.SENIOR_LECTOR;
+                    case "3" -> TeacherTitle.LECTOR;
+                    case "4" -> TeacherTitle.PROFESSOR;
+                    default  -> TeacherTitle.TUTOR;
+                };
+                yield new Teacher(userId, firstName, lastName, email, password, faculty, 0.0, title);
+            }
+            case MANAGER -> {
+                System.out.println("  Type: 1=DEPARTMENT  2=OR  3=DEAN");
+                System.out.print("  Choice: ");
+                ManagerType mt = switch (scanner.nextLine().trim()) {
+                    case "2" -> ManagerType.OR;
+                    case "3" -> ManagerType.DEAN;
+                    default  -> ManagerType.DEPARTMENT;
+                };
+                yield new Manager(userId, firstName, lastName, email, password, faculty, 0.0, mt);
+            }
+            case ADMIN -> new Admin(userId, firstName, lastName, email, password, faculty);
+            default    -> null;
+        };
 
-                TeacherTitle title;
-                switch (titleChoice) {
-                    case "1":
-                        title = TeacherTitle.TUTOR;
-                        break;
-                    case "2":
-                        title = TeacherTitle.SENIOR_LECTOR;
-                        break;
-                    case "3":
-                        title = TeacherTitle.LECTOR;
-                        break;
-                    case "4":
-                        title = TeacherTitle.PROFESSOR;
-                        break;
-                    default:
-                        title = TeacherTitle.TUTOR;
-                        System.out.println("Invalid title. Defaulting to TUTOR.");
-                }
-                newUser = new Teacher(userId, firstName, lastName, email, password, faculty, 0.0, title);
-                break;
-            case MANAGER:
-                System.out.println("Select Manager Type:");
-                System.out.println("1. DEPARTMENT");
-                System.out.println("2. OR");
-                System.out.println("3. DEAN");
-                System.out.print("Choice (1-3): ");
-                String managerTypeChoice = scanner.nextLine().trim();
-
-                ManagerType managerType;
-                switch (managerTypeChoice) {
-                    case "1":
-                        managerType = ManagerType.DEPARTMENT;
-                        break;
-                    case "2":
-                        managerType = ManagerType.OR;
-                        break;
-                    case "3":
-                        managerType = ManagerType.DEAN;
-                        break;
-                    default:
-                        managerType = ManagerType.DEPARTMENT;
-                        System.out.println("Invalid type. Defaulting to DEPARTMENT.");
-                }
-                newUser = new Manager(userId, firstName, lastName, email, password, faculty, 0.0, managerType);
-                break;
-            case ADMIN:
-                newUser = new Admin(userId, firstName, lastName, email, password, faculty);
-                break;
-            default:
-                System.out.println("Unsupported role.");
-                return;
-        }
+        if (newUser == null) { System.out.println(Colors.red("  [ERROR] Unsupported role.")); return; }
 
         try {
             authService.registerUser(newUser);
-            System.out.println("User added successfully: " + newUser.getFullName());
-
-            // Log the action
+            DataRepository.getInstance().save();
+            System.out.println(Colors.green("  User added: " + newUser.getFullName() + " (ID: " + userId + ")"));
             logService.log(admin.getId(), admin.getFullName(),
-                    "Added user: " + newUser.getFullName() + " (" + role + ", ID: " + userId + ")");
+                    "Added user: " + newUser.getFullName() + " (" + role + ")");
+            DataRepository.getInstance().save();
         } catch (Exception e) {
-            System.out.println("Error adding user: " + e.getMessage());
+            System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
         }
     }
 
-    /**
-     * Removes a user from the system by their unique ID.
-     * First displays a list of users to help identify the correct ID.
-     * Prompts for confirmation before deletion.
-     * Logs the action after completion.
-     */
+    // ══════════════════════════════════════════════════════════════════════════
+    //  2. REMOVE USER
+    // ══════════════════════════════════════════════════════════════════════════
+
     private void removeUser() {
-        System.out.println("\n=== REMOVE USER ===");
+        System.out.println(Colors.purple("\n  ── Remove User ──"));
 
-        // Show list of users to help admin find the ID
-        System.out.println("Current users in the system:");
-        Map<String, User> allUsers = authService.getAllUsers();
-        if (allUsers.isEmpty()) {
-            System.out.println("No users found in the system.");
+        List<User> users = getSortedUsers();
+        User target = Paginator.selectFromList(users, "Select User to Remove",
+                u -> String.format("%-10s %-25s %s", u.getId(), u.getFullName(), u.getRole()),
+                scanner);
+        if (target == null) return;
+
+        System.out.println("  Selected: " + target.getFullName() + " (" + target.getRole() + ")");
+        System.out.print(Colors.red("  Confirm removal? (yes/No): "));
+        if (!"yes".equalsIgnoreCase(scanner.nextLine().trim())) {
+            System.out.println(Colors.gray("  Cancelled."));
             return;
-        }
-
-        // Display first 10 users as a preview (to avoid flooding console)
-        printUserListPreview(allUsers);
-
-        System.out.print("\nEnter User ID to remove: ");
-        String userId = scanner.nextLine().trim();
-
-        // Find user by ID using direct Map lookup (O(1) instead of O(n))
-        User userToRemove = allUsers.get(userId);
-
-        if (userToRemove == null) {
-            System.out.println("User not found with ID: " + userId);
-            return;
-        }
-
-        System.out.println("Found user: " + userToRemove.getFullName() + " (" + userToRemove.getRole() + ")");
-        System.out.print("Are you sure you want to remove this user? (yes/no): ");
-        String confirm = scanner.nextLine().trim().toLowerCase();
-
-        if ("yes".equals(confirm)) {
-            try {
-                // Remove using email internally (as AuthService currently works)
-                authService.removeUser(userToRemove.getEmail());
-                System.out.println("User removed successfully.");
-
-                // Log the action with ID for better traceability
-                logService.log(admin.getId(), admin.getFullName(),
-                        "Removed user: " + userToRemove.getFullName() + " (ID: " + userId + ")");
-            } catch (Exception e) {
-                System.out.println("Error removing user: " + e.getMessage());
-            }
-        } else {
-            System.out.println("User removal cancelled.");
-        }
-    }
-
-    /**
-     * Helper method to print a preview of users (first 10).
-     * Avoids code duplication between removeUser and updateUser methods.
-     *
-     * @param allUsers map of all users to display
-     */
-    private void printUserListPreview(Map<String, User> allUsers) {
-        int count = 0;
-        for (User u : allUsers.values()) {
-            System.out.printf("ID: %-15s | Name: %-20s | Email: %s%n",
-                    u.getId(), u.getFullName(), u.getEmail());
-            count++;
-            if (count >= 10) {
-                System.out.println("... (showing first 10 users only)");
-                break;
-            }
-        }
-    }
-
-    /**
-     * Updates an existing user's information.
-     * Allows modifying first name, last name, email, and password.
-     * Uses User ID for identification (more reliable than email).
-     * Logs the action after completion.
-     */
-    private void updateUser() {
-        System.out.println("\n=== UPDATE USER ===");
-
-        // Show list of users to help admin find the ID
-        System.out.println("Current users in the system:");
-        Map<String, User> allUsers = authService.getAllUsers();
-        if (allUsers.isEmpty()) {
-            System.out.println("No users found in the system.");
-            return;
-        }
-
-        // Display first 10 users as a preview
-        printUserListPreview(allUsers);
-
-        System.out.print("\nEnter User ID to update: ");
-        String userId = scanner.nextLine().trim();
-
-        // Find user by ID using direct Map lookup
-        User userToUpdate = allUsers.get(userId);
-
-        if (userToUpdate == null) {
-            System.out.println("User not found with ID: " + userId);
-            return;
-        }
-
-        System.out.println("\nCurrent user info: " + userToUpdate);
-
-        System.out.print("Enter new first name (or press Enter to keep current): ");
-        String firstNameInput = scanner.nextLine().trim();
-        String firstName = firstNameInput.isEmpty() ? userToUpdate.getFirstName() : firstNameInput;
-
-        System.out.print("Enter new last name (or press Enter to keep current): ");
-        String lastNameInput = scanner.nextLine().trim();
-        String lastName = lastNameInput.isEmpty() ? userToUpdate.getLastName() : lastNameInput;
-
-        System.out.print("Enter new email (or press Enter to keep current): ");
-        String emailInput = scanner.nextLine().trim();
-        String newEmail = emailInput.isEmpty() ? userToUpdate.getEmail() : emailInput;
-
-        // Validate new email if changed
-        if (!newEmail.equals(userToUpdate.getEmail()) && !Validator.validateEmail(newEmail)) {
-            System.out.println("Invalid email format. Update cancelled.");
-            return;
-        }
-
-        System.out.print("Enter new password (or press Enter to keep current): ");
-        String passwordInput = scanner.nextLine().trim();
-        String password = passwordInput.isEmpty() ? userToUpdate.getPassword() : passwordInput;
-
-        // Validate new password if changed
-        if (!password.equals(userToUpdate.getPassword()) && !Validator.validatePassword(password)) {
-            System.out.println("Invalid password. Password must be at least 6 characters long. Update cancelled.");
-            return;
-        }
-
-        // Update user fields
-        userToUpdate.setFirstName(firstName);
-        userToUpdate.setLastName(lastName);
-
-        // If email changed, update it
-        if (!newEmail.equals(userToUpdate.getEmail())) {
-            userToUpdate.setEmail(newEmail);
-        }
-
-        if (!password.equals(userToUpdate.getPassword())) {
-            userToUpdate.setPassword(password);
         }
 
         try {
-            authService.updateUser(userToUpdate);
-            System.out.println("User updated successfully.");
-
-            // Log the action with ID for better traceability
+            authService.removeUser(target.getEmail());
+            DataRepository.getInstance().save();
+            System.out.println(Colors.green("  User removed."));
             logService.log(admin.getId(), admin.getFullName(),
-                    "Updated user: " + userToUpdate.getFullName() + " (ID: " + userId + ")");
+                    "Removed user: " + target.getFullName() + " (ID: " + target.getId() + ")");
+            DataRepository.getInstance().save();
         } catch (Exception e) {
-            System.out.println("Error updating user: " + e.getMessage());
+            System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
         }
     }
 
-    /**
-     * Displays system logs to the admin.
-     * Shows recent logs and allows viewing logs by user.
-     * Uses Comparator to sort logs by timestamp.
-     */
-    private void viewLogs() {
-        System.out.println("\n=== VIEW LOGS ===");
+    // ══════════════════════════════════════════════════════════════════════════
+    //  3. UPDATE USER
+    // ══════════════════════════════════════════════════════════════════════════
 
-        System.out.println("1. View Recent Logs (last 20, sorted by date)");
-        System.out.println("2. View All Logs (sorted by date)");
-        System.out.println("3. View Logs by User ID (sorted by date)");
-        System.out.print("Select option (1-3): ");
-        String choice = scanner.nextLine().trim();
+    private void updateUser() {
+        System.out.println(Colors.purple("\n  ── Update User ──"));
 
-        List<LogEntry> logs;
+        List<User> users = getSortedUsers();
+        User target = Paginator.selectFromList(users, "Select User to Update",
+                u -> String.format("%-10s %-25s %s", u.getId(), u.getFullName(), u.getRole()),
+                scanner);
+        if (target == null) return;
 
-        switch (choice) {
-            case "1":
-                logs = logService.getRecentLogs(20);
-                // Sort by timestamp descending (newest first)
-                logs.sort(Comparator.comparing(LogEntry::getTimestamp).reversed());
-                System.out.println("\n--- Recent Logs (last 20, sorted by date) ---");
-                break;
-            case "2":
-                logs = logService.getAllLogs();
-                // Sort by timestamp descending (newest first)
-                logs.sort(Comparator.comparing(LogEntry::getTimestamp).reversed());
-                System.out.println("\n--- All Logs (sorted by date) ---");
-                break;
-            case "3":
-                System.out.print("Enter User ID: ");
-                String userId = scanner.nextLine().trim();
-                logs = logService.getLogsByUserId(userId);
-                // Sort by timestamp descending (newest first)
-                logs.sort(Comparator.comparing(LogEntry::getTimestamp).reversed());
-                System.out.println("\n--- Logs for User: " + userId + " (sorted by date) ---");
-                break;
-            default:
-                System.out.println("Invalid option.");
+        System.out.println("  Current: " + target);
+
+        System.out.print("  New first name (Enter to keep): ");
+        String fn = scanner.nextLine().trim();
+        if (!fn.isEmpty()) target.setFirstName(fn);
+
+        System.out.print("  New last name (Enter to keep): ");
+        String ln = scanner.nextLine().trim();
+        if (!ln.isEmpty()) target.setLastName(ln);
+
+        System.out.print("  New email (Enter to keep): ");
+        String em = scanner.nextLine().trim();
+        if (!em.isEmpty()) {
+            if (!Validator.validateEmail(em)) {
+                System.out.println(Colors.red("  [ERROR] Invalid email. Update cancelled."));
                 return;
-        }
-
-        if (logs.isEmpty()) {
-            System.out.println("No logs found.");
-        } else {
-            for (LogEntry entry : logs) {
-                System.out.println(entry);
             }
-            System.out.println("Total logs displayed: " + logs.size());
+            target.setEmail(em);
         }
 
-        // Log the action
-        logService.log(admin.getId(), admin.getFullName(), "Viewed system logs");
-    }
-
-    /**
-     * Displays all complaints in the system.
-     * Shows complaint details including sender, recipient, text, and status.
-     * Uses Comparator to sort complaints by creation date.
-     */
-    private void viewComplaints() {
-        System.out.println("\n=== VIEW COMPLAINTS ===");
-
-        System.out.println("1. View All Complaints (sorted by date)");
-        System.out.println("2. View Pending Complaints (sorted by date)");
-        System.out.println("3. View Complaints by Recipient (sorted by date)");
-        System.out.print("Select option (1-3): ");
-        String choice = scanner.nextLine().trim();
-
-        List<Complaint> complaints;
-
-        switch (choice) {
-            case "1":
-                complaints = (List<Complaint>) complaintService.getAllComplaints();
-                // Sort by creation date descending (newest first)
-                complaints.sort(Comparator.comparing(Complaint::getCreatedAt).reversed());
-                System.out.println("\n--- All Complaints (sorted by date) ---");
-                break;
-            case "2":
-                complaints = complaintService.getPendingComplaints();
-                // Sort by creation date descending (newest first)
-                complaints.sort(Comparator.comparing(Complaint::getCreatedAt).reversed());
-                System.out.println("\n--- Pending Complaints (sorted by date) ---");
-                break;
-            case "3":
-                System.out.print("Enter Recipient User ID: ");
-                String recipientId = scanner.nextLine().trim();
-                complaints = complaintService.getComplaintsByRecipientId(recipientId);
-                // Sort by creation date descending (newest first)
-                complaints.sort(Comparator.comparing(Complaint::getCreatedAt).reversed());
-                System.out.println("\n--- Complaints against User: " + recipientId + " (sorted by date) ---");
-                break;
-            default:
-                System.out.println("Invalid option.");
+        System.out.print("  New password (Enter to keep): ");
+        String pw = scanner.nextLine().trim();
+        if (!pw.isEmpty()) {
+            if (!Validator.validatePassword(pw)) {
+                System.out.println(Colors.red("  [ERROR] Invalid password. Update cancelled."));
                 return;
-        }
-
-        if (complaints.isEmpty()) {
-            System.out.println("No complaints found.");
-        } else {
-            for (Complaint complaint : complaints) {
-                System.out.println(complaint);
             }
-            System.out.println("Total complaints displayed: " + complaints.size());
+            target.setPassword(Validator.hashPassword(pw));
         }
 
-        // Log the action
-        logService.log(admin.getId(), admin.getFullName(), "Viewed complaints");
-    }
-
-    /**
-     * Allows admin to manage (resolve/reject) complaints.
-     * Shows pending complaints and allows status updates.
-     */
-    private void manageComplaints() {
-        System.out.println("\n=== MANAGE COMPLAINTS ===");
-
-        List<Complaint> pendingComplaints = complaintService.getPendingComplaints();
-
-        if (pendingComplaints.isEmpty()) {
-            System.out.println("No pending complaints to manage.");
-            // Log the action
-            logService.log(admin.getId(), admin.getFullName(), "Attempted to manage complaints - none pending");
-            return;
-        }
-
-        System.out.println("Pending complaints:");
-        for (int i = 0; i < pendingComplaints.size(); i++) {
-            Complaint c = pendingComplaints.get(i);
-            System.out.println((i + 1) + ". " + c.getId() + " | From: " + c.getSenderName() +
-                    " To: " + c.getRecipientName());
-        }
-
-        System.out.print("\nEnter complaint number to manage (1-" + pendingComplaints.size() + ", or 0 to cancel): ");
-        String choice = scanner.nextLine().trim();
-
-        int complaintIndex;
         try {
-            complaintIndex = Integer.parseInt(choice);
-        } catch (NumberFormatException e) {
-            System.out.println("Invalid input.");
+            authService.updateUser(target);
+            DataRepository.getInstance().save();
+            System.out.println(Colors.green("  User updated: " + target.getFullName()));
+            logService.log(admin.getId(), admin.getFullName(),
+                    "Updated user: " + target.getFullName() + " (ID: " + target.getId() + ")");
+            DataRepository.getInstance().save();
+        } catch (Exception e) {
+            System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  4. VIEW LOGS
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void viewLogs() {
+        boolean back = false;
+        while (!back) {
+            System.out.println(Colors.purple("\n  ── View Logs ──"));
+            System.out.println("   1. Recent logs (last 20)");
+            System.out.println("   2. All logs");
+            System.out.println("   3. Logs by user");
+            System.out.println(Colors.gray("   0. <- Back"));
+            System.out.print("  Choice: ");
+
+            switch (ConsoleHelper.readChoice(scanner)) {
+                case "1" -> {
+                    List<LogEntry> logs = new ArrayList<>(logService.getRecentLogs(20));
+                    logs.sort(Comparator.comparing(LogEntry::getTimestamp).reversed());
+                    Paginator.viewList(logs, "Recent Logs", LogEntry::toString, scanner);
+                }
+                case "2" -> {
+                    List<LogEntry> logs = new ArrayList<>(logService.getAllLogs());
+                    logs.sort(Comparator.comparing(LogEntry::getTimestamp).reversed());
+                    Paginator.viewList(logs, "All Logs", LogEntry::toString, scanner);
+                }
+                case "3" -> {
+                    System.out.print("  User ID: ");
+                    String uid = ConsoleHelper.readChoice(scanner);
+                    List<LogEntry> logs = new ArrayList<>(logService.getLogsByUserId(uid));
+                    logs.sort(Comparator.comparing(LogEntry::getTimestamp).reversed());
+                    Paginator.viewList(logs, "Logs for " + uid, LogEntry::toString, scanner);
+                }
+                case "0" -> back = true;
+                default  -> System.out.println(Colors.red("  Invalid option."));
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  5. VIEW COMPLAINTS
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void viewComplaints() {
+        boolean back = false;
+        while (!back) {
+            System.out.println(Colors.purple("\n  ── View Complaints ──"));
+            System.out.println("   1. All complaints");
+            System.out.println("   2. Pending complaints");
+            System.out.println("   3. By recipient ID");
+            System.out.println(Colors.gray("   0. <- Back"));
+            System.out.print("  Choice: ");
+
+            switch (ConsoleHelper.readChoice(scanner)) {
+                case "1" -> {
+                    List<Complaint> list = new ArrayList<>(complaintService.getAllComplaints());
+                    list.sort(Comparator.comparing(Complaint::getCreatedAt).reversed());
+                    Paginator.viewList(list, "All Complaints", AdminMenu::formatComplaint, scanner);
+                }
+                case "2" -> {
+                    List<Complaint> list = new ArrayList<>(complaintService.getPendingComplaints());
+                    list.sort(Comparator.comparing(Complaint::getCreatedAt).reversed());
+                    Paginator.viewList(list, "Pending Complaints", AdminMenu::formatComplaint, scanner);
+                }
+                case "3" -> {
+                    System.out.print("  Recipient user ID: ");
+                    String rid = ConsoleHelper.readChoice(scanner);
+                    List<Complaint> list = new ArrayList<>(
+                            complaintService.getComplaintsByRecipientId(rid));
+                    list.sort(Comparator.comparing(Complaint::getCreatedAt).reversed());
+                    Paginator.viewList(list, "Complaints against " + rid, AdminMenu::formatComplaint, scanner);
+                }
+                case "0" -> back = true;
+                default  -> System.out.println(Colors.red("  Invalid option."));
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  6. MANAGE COMPLAINTS
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void manageComplaints() {
+        List<Complaint> pending = complaintService.getPendingComplaints();
+        if (pending.isEmpty()) {
+            System.out.println("  No pending complaints.");
             return;
         }
 
-        if (complaintIndex == 0) {
-            System.out.println("Cancelled.");
-            return;
-        }
+        Complaint selected = Paginator.selectFromList(pending, "Pending Complaints",
+                c -> Colors.gray(String.format("[%s] #%s  From: %s  ->  %s",
+                        c.getCreatedAt().toLocalDate(), c.getId().substring(0, 8),
+                        c.getSenderName(), c.getRecipientName())),
+                scanner);
+        if (selected == null) return;
 
-        if (complaintIndex < 1 || complaintIndex > pendingComplaints.size()) {
-            System.out.println("Invalid complaint number.");
-            return;
-        }
-
-        Complaint selectedComplaint = pendingComplaints.get(complaintIndex - 1);
-        System.out.println("\nSelected complaint:");
-        System.out.println(selectedComplaint);
-
-        System.out.println("\nActions:");
-        System.out.println("1. Resolve Complaint");
-        System.out.println("2. Reject Complaint");
-        System.out.print("Select action (1-2): ");
-        String actionChoice = scanner.nextLine().trim();
+        System.out.println("  " + formatComplaint(selected));
+        System.out.println();
+        System.out.println(Colors.green("  1. Resolve") + "   " + Colors.red("  2. Reject") + "   " + Colors.gray("  0. Cancel"));
+        System.out.print("  Choice: ");
 
         boolean success;
         String action;
-
-        switch (actionChoice) {
-            case "1":
-                success = complaintService.resolveComplaint(selectedComplaint.getId());
-                action = "resolved";
-                break;
-            case "2":
-                success = complaintService.rejectComplaint(selectedComplaint.getId());
-                action = "rejected";
-                break;
-            default:
-                System.out.println("Invalid action.");
-                return;
+        switch (ConsoleHelper.readChoice(scanner)) {
+            case "1" -> { success = complaintService.resolveComplaint(selected.getId()); action = "resolved"; }
+            case "2" -> { success = complaintService.rejectComplaint(selected.getId());  action = "rejected"; }
+            default  -> { System.out.println(Colors.gray("  Cancelled.")); return; }
         }
 
         if (success) {
-            System.out.println("Complaint " + action + " successfully.");
-            logService.log(admin.getId(), admin.getFullName(),
-                    action + " complaint: " + selectedComplaint.getId());
+            DataRepository.getInstance().save();
+            String colored = "resolved".equals(action) ? Colors.green("  Complaint resolved.") : Colors.red("  Complaint rejected.");
+            System.out.println(colored);
+            logService.log(admin.getId(), admin.getFullName(), action + " complaint: " + selected.getId());
             DataRepository.getInstance().save();
         } else {
-            System.out.println("Failed to update complaint status.");
+            System.out.println(Colors.red("  Failed to update complaint status."));
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  7. CLOSE ACADEMIC YEAR
+    // ══════════════════════════════════════════════════════════════════════════
+
+    private void closeYear() {
+        System.out.println(Colors.purple("\n  ── Close Academic Year ──"));
+        MarkService markService = MarkService.getInstance();
+
+        List<Student> students = authService.getAllUsers().values().stream()
+                .filter(u -> u instanceof Student).map(u -> (Student) u)
+                .sorted(Comparator.comparing(User::getLastName))
+                .collect(Collectors.toList());
+
+        if (students.isEmpty()) { System.out.println("  No students in the system."); return; }
+
+        System.out.println("\n  Students to process:");
+        System.out.printf("  %-8s %-22s %-6s %-8s %s%n", "ID", "Name", "Year", "GPA", "Status");
+        System.out.println("  " + "─".repeat(60));
+        for (Student s : students) {
+            List<Mark> marks = markService.getMarksForStudent(s.getId());
+            boolean hasF  = marks.stream().anyMatch(m -> "F".equals(m.getLetterGrade()));
+            boolean hasFX = marks.stream().anyMatch(m -> "FX".equals(m.getLetterGrade()));
+            String status = hasF ? Colors.red("FAIL (holds year)") : hasFX ? Colors.red("FX (retake exam)") : Colors.green("PASS");
+            System.out.printf("  %-8s %-22s %-6d %-8.2f %s%n",
+                    s.getId(), s.getFullName(), s.getYear(),
+                    markService.getGpa(s.getId()), status);
+        }
+
+        System.out.print(Colors.yellow("\n  Proceed with closing year? (yes/No): "));
+        if (!"yes".equalsIgnoreCase(scanner.nextLine().trim())) {
+            System.out.println(Colors.gray("  Cancelled."));
+            return;
+        }
+
+        int advanced = 0, held = 0, graduated = 0;
+        for (Student s : students) {
+            boolean hasF = markService.getMarksForStudent(s.getId())
+                    .stream().anyMatch(m -> "F".equals(m.getLetterGrade()));
+            if (hasF) { held++; continue; }
+            if (s.getYear() >= 4) {
+                graduated++;
+                logService.log(admin.getId(), admin.getFullName(),
+                        "Graduated: " + s.getFullName() + " (ID: " + s.getId() + ")");
+            } else {
+                s.setYear(s.getYear() + 1);
+                advanced++;
+            }
+        }
+
+        DataRepository.getInstance().save();
+        System.out.println(Colors.green("\n  Academic year closed."));
+        System.out.printf("  Advanced: %d | " + Colors.green("Graduated: %d") + " | " + Colors.red("Held back (F): %d") + "%n",
+                advanced, graduated, held);
+        logService.log(admin.getId(), admin.getFullName(),
+                "Closed year — advanced: " + advanced + ", grad: " + graduated + ", held: " + held);
+        DataRepository.getInstance().save();
+        ConsoleHelper.pressEnterToContinue(scanner);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private static String formatComplaint(Complaint c) {
+        String statusStr = switch (c.getStatus()) {
+            case PENDING      -> Colors.yellow("PENDING");
+            case UNDER_REVIEW -> Colors.cyan("UNDER REVIEW");
+            case RESOLVED     -> Colors.green("RESOLVED");
+            case REJECTED     -> Colors.red("REJECTED");
+        };
+        return Colors.gray(String.format("[%s] #%s | From: %s  ->  %s | Status: ",
+                c.getCreatedAt().toLocalDate(),
+                c.getId().substring(0, 8),
+                c.getSenderName(), c.getRecipientName()))
+                + statusStr
+                + Colors.gray("\n    \"" + c.getText() + "\"");
+    }
+
+    private List<User> getSortedUsers() {
+        return authService.getAllUsers().values().stream()
+                .sorted(Comparator.comparing(User::getLastName).thenComparing(User::getFirstName))
+                .collect(Collectors.toList());
+    }
+
+    private Faculty pickFaculty() {
+        Faculty[] values = Faculty.values();
+        System.out.println("  Faculty:");
+        for (int i = 0; i < values.length; i++)
+            System.out.printf("  %d. %s%n", i + 1, values[i]);
+        System.out.print("  Choice: ");
+        try {
+            int idx = Integer.parseInt(scanner.nextLine().trim()) - 1;
+            if (idx >= 0 && idx < values.length) return values[idx];
+        } catch (NumberFormatException ignored) {}
+        System.out.println(Colors.red("  [ERROR] Invalid selection."));
+        return null;
     }
 }
