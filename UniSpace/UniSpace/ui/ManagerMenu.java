@@ -68,8 +68,7 @@ public class ManagerMenu extends BaseMenu {
                 case "7"  -> viewInbox();
                 case "8"  -> sendMessage();
                 case "9"  -> assignSupervisor();
-                case "10" -> activateResearcherRole();
-                case "11" -> manageResearcherRequests();
+                case "10" -> manageResearcherRequests();
                 case "0"  -> running = false;
                 default   -> System.out.println(Colors.red("  Invalid option."));
             }
@@ -83,57 +82,67 @@ public class ManagerMenu extends BaseMenu {
     private void manageRegistrationRequests() {
         boolean back = false;
         while (!back) {
-            System.out.println(Colors.purple("\n  ── Registration Requests ──"));
-            System.out.println("   1. View pending requests");
-            System.out.println("   2. Approve request");
-            System.out.println("   3. Reject request");
-            System.out.println("   4. View all requests (history)");
+            int pendingCount = registrationService.getPendingRequests().size();
+            System.out.println(Colors.purple("\n  -- Registration Requests --")
+                    + (pendingCount > 0 ? Colors.yellow(" (" + pendingCount + " pending)") : ""));
+            System.out.println("   1. Process a pending request");
+            System.out.println("   2. View all requests (history)");
             System.out.println(Colors.gray("   0. <- Back"));
             System.out.print("  Choice: ");
 
             switch (ConsoleHelper.readChoice(scanner)) {
-                case "1" -> viewPendingRequests();
-                case "2" -> approveRequest();
-                case "3" -> rejectRequest();
-                case "4" -> viewAllRequests();
+                case "1" -> processRegistrationRequest();
+                case "2" -> viewAllRequests();
                 case "0" -> back = true;
                 default  -> System.out.println(Colors.red("  Invalid option."));
             }
         }
     }
 
-    private void viewPendingRequests() {
+    private void processRegistrationRequest() {
         List<RegistrationRequest> pending = registrationService.getPendingRequests();
-        Paginator.viewList(pending, "Pending Registration Requests",
-                RegistrationRequest::toString, scanner);
-    }
-
-    private void approveRequest() {
-        viewPendingRequests();
-        System.out.print("  Request ID to approve: ");
-        String id = ConsoleHelper.readChoice(scanner);
-        try {
-            RegistrationRequest req = registrationService.approveRequest(id, courseService);
-            DataRepository.getInstance().save();
-            System.out.println(Colors.green("  Approved: " + req.getStudentId() + " → " + req.getCourseCode()));
-        } catch (CourseRegistrationException e) {
-            System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
+        if (pending.isEmpty()) {
+            System.out.println("  No pending registration requests.");
+            ConsoleHelper.pressEnterToContinue(scanner);
+            return;
         }
-    }
+        RegistrationRequest req = Paginator.selectFromList(pending, "Pending Registration Requests",
+                r -> String.format("[%s] [%s] Student %-8s -> %-8s  (%s)",
+                        r.getRequestId().substring(0, 8), r.getStatus(),
+                        r.getStudentId(), r.getCourseCode(),
+                        r.getRequestDate().toLocalDate()),
+                scanner);
+        if (req == null) return;
 
-    private void rejectRequest() {
-        viewPendingRequests();
-        System.out.print("  Request ID to reject: ");
-        String id = ConsoleHelper.readChoice(scanner);
-        System.out.print("  Reason (optional): ");
-        String reason = ConsoleHelper.readChoice(scanner);
-        try {
-            registrationService.rejectRequest(id, reason.isEmpty() ? null : reason);
-            DataRepository.getInstance().save();
-            System.out.println(Colors.yellow("  Request rejected."));
-        } catch (CourseRegistrationException e) {
-            System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
+        System.out.println();
+        System.out.println(Colors.green("   1. Approve") + "   " + Colors.red("  2. Reject")
+                + "   " + Colors.gray("  0. Cancel"));
+        System.out.print("  Choice: ");
+
+        switch (ConsoleHelper.readChoice(scanner)) {
+            case "1" -> {
+                try {
+                    RegistrationRequest approved = registrationService.approveRequest(req.getRequestId(), courseService);
+                    DataRepository.getInstance().save();
+                    System.out.println(Colors.green("  Approved: " + approved.getStudentId() + " -> " + approved.getCourseCode()));
+                } catch (CourseRegistrationException e) {
+                    System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
+                }
+            }
+            case "2" -> {
+                System.out.print("  Reason (optional): ");
+                String reason = ConsoleHelper.readChoice(scanner);
+                try {
+                    registrationService.rejectRequest(req.getRequestId(), reason.isEmpty() ? null : reason);
+                    DataRepository.getInstance().save();
+                    System.out.println(Colors.yellow("  Request rejected."));
+                } catch (CourseRegistrationException e) {
+                    System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
+                }
+            }
+            default -> System.out.println(Colors.gray("  Cancelled."));
         }
+        ConsoleHelper.pressEnterToContinue(scanner);
     }
 
     private void viewAllRequests() {
@@ -148,7 +157,7 @@ public class ManagerMenu extends BaseMenu {
     private void manageCourses() {
         boolean back = false;
         while (!back) {
-            System.out.println(Colors.purple("\n  ── Manage Courses ──"));
+            System.out.println(Colors.purple("\n  -- Manage Courses --"));
             System.out.println("   1. Add new course");
             System.out.println("   2. View all courses");
             System.out.println("   3. Assign teacher to course");
@@ -243,10 +252,10 @@ public class ManagerMenu extends BaseMenu {
     private void viewAllCourses() {
         Collection<Course> courses = courseService.getAllCourses();
         if (courses.isEmpty()) { System.out.println("  No courses found."); return; }
-        System.out.println("\n  ── All Courses ──");
+        System.out.println("\n  -- All Courses --");
         System.out.printf("  %-8s %-32s %-8s %-24s %s%n",
                 "Code", "Name", "Credits", "Faculty", "Year");
-        System.out.println("  " + "─".repeat(85));
+        System.out.println("  " + "-".repeat(85));
         for (Course c : courses) {
             String fac  = c.getTargetFaculty() != null ? c.getTargetFaculty().toString() : "All";
             String year = c.getTargetYear() > 0 ? "Y" + c.getTargetYear() : "All";
@@ -283,7 +292,7 @@ public class ManagerMenu extends BaseMenu {
                 course -> String.format("%-8s %-30s %d credits", course.getCourseCode(), course.getName(), course.getCredits()),
                 scanner);
         if (c == null) return;
-        System.out.println("\n  ── Course Details ──");
+        System.out.println("\n  -- Course Details --");
         System.out.println("  Code    : " + c.getCourseCode());
         System.out.println("  Name    : " + c.getName());
         System.out.println("  Credits : " + c.getCredits());
@@ -301,7 +310,7 @@ public class ManagerMenu extends BaseMenu {
     private void viewStudents() {
         boolean back = false;
         while (!back) {
-            System.out.println(Colors.purple("\n  ── View Students ──"));
+            System.out.println(Colors.purple("\n  -- View Students --"));
             System.out.println("   1. All students by GPA (descending)");
             System.out.println("   2. All students alphabetically");
             System.out.println("   3. Students by faculty");
@@ -355,7 +364,7 @@ public class ManagerMenu extends BaseMenu {
                         st.getFaculty(), markService.getGpa(st.getId())),
                 scanner);
         if (s == null) return;
-        System.out.println("\n  ── Student Details ──");
+        System.out.println("\n  -- Student Details --");
         System.out.println("  " + s);
         System.out.println("  Credits enrolled : " + courseService.getStudentCredits(s.getId()));
         System.out.println("  Cumulative GPA   : " + String.format("%.2f", markService.getGpa(s.getId())));
@@ -370,7 +379,7 @@ public class ManagerMenu extends BaseMenu {
     private void viewTeachers() {
         boolean back = false;
         while (!back) {
-            System.out.println(Colors.purple("\n  ── View Teachers ──"));
+            System.out.println(Colors.purple("\n  -- View Teachers --"));
             System.out.println("   1. By rating (descending)");
             System.out.println("   2. Alphabetically");
             System.out.println("   3. Teacher details");
@@ -406,7 +415,7 @@ public class ManagerMenu extends BaseMenu {
                         tc.getId(), tc.getFullName(), tc.getTitle(), tc.getRating()),
                 scanner);
         if (t == null) return;
-        System.out.println("\n  ── Teacher Details ──");
+        System.out.println("\n  -- Teacher Details --");
         System.out.println("  " + t);
         List<Course> courses = courseService.getCoursesByInstructor(t.getId());
         System.out.println("  Courses (" + courses.size() + "): "
@@ -426,7 +435,7 @@ public class ManagerMenu extends BaseMenu {
     private void statisticalReports() {
         boolean back = false;
         while (!back) {
-            System.out.println(Colors.purple("\n  ── Statistical Reports ──"));
+            System.out.println(Colors.purple("\n  -- Statistical Reports --"));
             System.out.println("   1. Mark report for a course");
             System.out.println("   2. GPA distribution (all students)");
             System.out.println("   3. Top-N students by GPA");
@@ -469,11 +478,11 @@ public class ManagerMenu extends BaseMenu {
             else if (gpa >  0.00) count1++;
             else                  count0++;
         }
-        System.out.println("\n  ── GPA Distribution ──");
-        System.out.printf("  A  (≥ 3.67) : %d students%n", count4);
-        System.out.printf("  B  (3.00–3.66): %d students%n", count3);
-        System.out.printf("  C  (2.00–2.99): %d students%n", count2);
-        System.out.printf("  D  (0.01–1.99): %d students%n", count1);
+        System.out.println("\n  -- GPA Distribution --");
+        System.out.printf("  A  (>= 3.67) : %d students%n", count4);
+        System.out.printf("  B  (3.00-3.66): %d students%n", count3);
+        System.out.printf("  C  (2.00-2.99): %d students%n", count2);
+        System.out.printf("  D  (0.01-1.99): %d students%n", count1);
         System.out.printf("  No grades yet : %d students%n", count0);
         System.out.printf("  Total         : %d students%n", students.size());
         ConsoleHelper.pressEnterToContinue(scanner);
@@ -490,7 +499,7 @@ public class ManagerMenu extends BaseMenu {
                 .limit(n)
                 .collect(Collectors.toList());
 
-        System.out.println("\n  ── Top " + n + " Students ──");
+        System.out.println("\n  -- Top" + n + " Students --");
         int rank = 1;
         for (Student s : sorted) {
             System.out.printf("  %2d. %-22s GPA: %.2f  %s Y%d%n",
@@ -522,7 +531,7 @@ public class ManagerMenu extends BaseMenu {
     private void manageNews() {
         boolean back = false;
         while (!back) {
-            System.out.println(Colors.purple("\n  ── Manage News ──"));
+            System.out.println(Colors.purple("\n  -- Manage News --"));
             System.out.println("   1. Add news");
             System.out.println("   2. View all news");
             System.out.println("   3. Remove news");
@@ -582,7 +591,7 @@ public class ManagerMenu extends BaseMenu {
     // ══════════════════════════════════════════════════════════════════════════
 
     private void activateResearcherRole() {
-        System.out.println("\n  ── Activate Researcher Role ──");
+        System.out.println("\n  -- Activate Researcher Role --");
         System.out.println("  Select user type: 1. Teacher  2. Student");
         System.out.print("  Choice: ");
         String typeChoice = scanner.nextLine().trim();
@@ -607,7 +616,7 @@ public class ManagerMenu extends BaseMenu {
         }
 
         System.out.printf("  %-10s %-25s %-12s%n", "ID", "Name", "Role");
-        System.out.println("  " + "─".repeat(50));
+        System.out.println("  " + "-".repeat(50));
         candidates.forEach(u -> System.out.printf("  %-10s %-25s %-12s%n",
                 u.getId(), u.getFullName(), u.getRole()));
 
@@ -641,7 +650,7 @@ public class ManagerMenu extends BaseMenu {
         boolean back = false;
         while (!back) {
             int pending = rrs.getPendingRequests().size();
-            System.out.println(Colors.purple("\n  ── Researcher Role Requests ──")
+            System.out.println(Colors.purple("\n  -- Researcher Role Requests --")
                     + (pending > 0 ? Colors.yellow(" (" + pending + " pending)") : ""));
             System.out.println("   1. Process a pending request");
             System.out.println("   2. View all requests");
@@ -673,7 +682,7 @@ public class ManagerMenu extends BaseMenu {
                 scanner);
         if (req == null) return;
 
-        System.out.println(Colors.purple("\n  ── Request Details ──"));
+        System.out.println(Colors.purple("\n  -- Request Details --"));
         System.out.println("  Applicant : " + req.getApplicantName() + " (" + req.getApplicantRole() + ")");
         System.out.println("  Submitted : " + Colors.gray(req.getSubmittedAt().toLocalDate().toString()));
         System.out.println();
@@ -744,9 +753,9 @@ public class ManagerMenu extends BaseMenu {
             return;
         }
 
-        System.out.println("\n  ── 4th-Year Students ──");
+        System.out.println("\n  -- 4th-Year Students --");
         System.out.printf("  %-8s %-24s %s%n", "ID", "Name", "Current Supervisor");
-        System.out.println("  " + "─".repeat(60));
+        System.out.println("  " + "-".repeat(60));
         for (Student s : fourthYear) {
             String sup = s.getSupervisor() != null ? s.getSupervisor().getName() : "None";
             System.out.printf("  %-8s %-24s %s%n", s.getId(), s.getFullName(), sup);
@@ -774,9 +783,9 @@ public class ManagerMenu extends BaseMenu {
             return;
         }
 
-        System.out.println("\n  ── Available Researchers ──");
+        System.out.println("\n  -- Available Researchers --");
         System.out.printf("  %-8s %-24s %s%n", "ID", "Name", "h-index");
-        System.out.println("  " + "─".repeat(45));
+        System.out.println("  " + "-".repeat(45));
         for (User r : researcherUsers) {
             ResearcherProfile rp = getProfile(r);
             if (rp != null)
@@ -785,6 +794,10 @@ public class ManagerMenu extends BaseMenu {
 
         System.out.print("  Researcher ID: ");
         String researcherId = scanner.nextLine().trim();
+        if (studentId.equals(researcherId)) {
+            System.out.println(Colors.red("  [ERROR] A student cannot be their own supervisor."));
+            return;
+        }
         User ru = authService.getUserById(researcherId);
         ResearcherProfile rp = getProfile(ru);
 
@@ -796,8 +809,8 @@ public class ManagerMenu extends BaseMenu {
         try {
             student.setSupervisor(rp);
             DataRepository.getInstance().save();
-            System.out.println("  Supervisor assigned: " + ru.getFullName()
-                    + " (h-index: " + rp.getHIndex() + ") → " + student.getFullName());
+            System.out.println(Colors.green("  Supervisor assigned: " + ru.getFullName()
+                    + " (h-index: " + rp.getHIndex() + ") -> " + student.getFullName()));
         } catch (HIndexException e) {
             System.out.println("  [ERROR] " + e.getMessage());
         } catch (ValidationException e) {
@@ -820,10 +833,10 @@ public class ManagerMenu extends BaseMenu {
         int resPending = ResearcherRequestService.getInstance().getPendingRequests().size();
         int unread     = messageService.getUnreadCount(manager.getId());
 
-        System.out.println(Colors.gray("\n  ══════════════════════════════════════════════════"));
+        System.out.println(Colors.gray("\n  =================================================="));
         System.out.println(Colors.bold("   Manager Menu - " + manager.getFullName()
                 + "  [" + manager.getManagerType() + "]"));
-        System.out.println(Colors.gray("  ══════════════════════════════════════════════════"));
+        System.out.println(Colors.gray("  =================================================="));
         System.out.println("   1. Registration Requests"
                 + (regPending > 0 ? Colors.yellow(" (" + regPending + " pending)") : ""));
         System.out.println("   2. Manage Courses");
@@ -834,8 +847,7 @@ public class ManagerMenu extends BaseMenu {
         System.out.println("   7. View Inbox" + (unread > 0 ? Colors.yellow(" [" + unread + " unread]") : ""));
         System.out.println("   8. Send Message");
         System.out.println("   9. Assign research supervisor (4th-year students)");
-        System.out.println("   10. Activate researcher role for a user");
-        System.out.println("   11. Researcher role requests"
+        System.out.println("   10. Researcher role requests"
                 + (resPending > 0 ? Colors.yellow(" (" + resPending + " pending)") : ""));
         System.out.println("   0. Logout");
         System.out.print("  Choice: ");

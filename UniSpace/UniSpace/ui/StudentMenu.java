@@ -86,7 +86,7 @@ public class StudentMenu extends BaseMenu {
                 .collect(Collectors.toList());
 
         int currentCredits = courseService.getStudentCredits(student.getId());
-        System.out.println(Colors.purple("\n  ── Available Courses ──")
+        System.out.println(Colors.purple("\n  -- Available Courses --")
                 + Colors.gray(" (Credits used: " + currentCredits + " / " + Student.MAX_CREDITS + ")"));
         if (available.isEmpty()) {
             System.out.println("  No available courses for your year/faculty.");
@@ -94,7 +94,7 @@ public class StudentMenu extends BaseMenu {
             return;
         }
         System.out.printf("  %-8s %-32s %-8s %s%n", "Code", "Name", "Credits", "");
-        System.out.println("  " + "─".repeat(60));
+        System.out.println("  " + "-".repeat(60));
         for (Course c : available) {
             String warn = (currentCredits + c.getCredits() > Student.MAX_CREDITS)
                     ? Colors.red(" [EXCEEDS LIMIT]") : "";
@@ -153,7 +153,7 @@ public class StudentMenu extends BaseMenu {
         List<Course> courses = courseService.getStudentCourses(student.getId());
         if (courses.isEmpty()) { System.out.println("  No courses registered."); }
         else {
-            System.out.println(Colors.purple("\n  ── Your Courses ──"));
+            System.out.println(Colors.purple("\n  -- Your Courses --"));
             int total = 0;
             for (Course c : courses) {
                 System.out.printf("    %-10s %-30s %d credits%n",
@@ -272,7 +272,7 @@ public class StudentMenu extends BaseMenu {
         Teacher teacher = Paginator.selectFromList(teachers, "Rate a Teacher - Select Teacher",
                 t -> {
                     String rated = t.hasRatedBy(student.getId())
-                            ? Colors.yellow("  [you already rated]") : "";
+                            ? Colors.yellow("  [rated - select to update]") : "";
                     return String.format("%-12s %-24s Rating: %.1f%s",
                             t.getId(), t.getFullName(), t.getRating(), rated);
                 },
@@ -348,7 +348,7 @@ public class StudentMenu extends BaseMenu {
             }
         }
 
-        System.out.println("  1. Submit researcher role request");
+        System.out.println(Colors.green("  1.") + " Submit researcher role request");
         System.out.println(Colors.gray("  0. <- Back"));
         System.out.print("  Choice: ");
         if ("1".equals(ConsoleHelper.readChoice(scanner))) {
@@ -384,11 +384,11 @@ public class StudentMenu extends BaseMenu {
         boolean hasPending = !isRes && ResearcherRequestService.getInstance().hasPendingRequest(student.getId());
         String  resLabel   = isRes ? "Researcher mode"
                 : hasPending ? Colors.yellow("Researcher mode [request pending]")
-                : "Researcher mode [submit request]";
+                : "Researcher mode " + Colors.yellow("[submit request]");
 
-        System.out.println(Colors.gray("\n  ══════════════════════════════════════"));
+        System.out.println(Colors.gray("\n  ========================================"));
         System.out.println(Colors.bold("   Student Menu - " + student.getFullName()));
-        System.out.println(Colors.gray("  ══════════════════════════════════════"));
+        System.out.println(Colors.gray("  ========================================"));
         System.out.println("   1. Register for a course");
         System.out.println("   2. Drop a course");
         System.out.println("   3. View my courses");

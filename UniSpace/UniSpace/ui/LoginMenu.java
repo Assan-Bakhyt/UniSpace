@@ -19,6 +19,7 @@ import UniSpace.service.ResearchService;
 
 import UniSpace.util.Colors;
 import UniSpace.util.ConsoleHelper;
+import UniSpace.util.Validator;
 
 import java.util.Scanner;
 
@@ -60,7 +61,7 @@ public class LoginMenu {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private void register() {
-        System.out.println(Colors.purple("\n  ── Student Registration ──"));
+        System.out.println(Colors.purple("\n  -- Student Registration --"));
 
         System.out.print("  First name : ");
         String firstName = ConsoleHelper.readChoice(scanner);
@@ -76,6 +77,14 @@ public class LoginMenu {
 
         if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || password.isEmpty()) {
             System.out.println(Colors.red("  [ERROR] All fields are required."));
+            return;
+        }
+        if (!Validator.validateEmail(email)) {
+            System.out.println(Colors.red("  [ERROR] Invalid email format (example: user@domain.com)."));
+            return;
+        }
+        if (!Validator.validatePassword(password)) {
+            System.out.println(Colors.red("  [ERROR] Password must be at least 6 chars and contain a letter and a digit."));
             return;
         }
 

@@ -44,14 +44,14 @@ public class ResearcherMenu {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
     //  1. MY RESEARCH
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
     private void myResearchMenu() {
         boolean back = false;
         while (!back) {
-            System.out.println(Colors.purple("\n  ── My Research ──"));
+            System.out.println(Colors.purple("\n  -- My Research --"));
             System.out.println("   1. View my papers");
             System.out.println("   2. Add paper");
             System.out.println("   3. My h-index");
@@ -85,7 +85,7 @@ public class ResearcherMenu {
     }
 
     private void addPaper() {
-        System.out.println(Colors.purple("\n  ── Add Research Paper ──"));
+        System.out.println(Colors.purple("\n  -- Add Research Paper --"));
         System.out.print("  Title: ");   String title   = ConsoleHelper.readChoice(scanner);
         System.out.print("  Journal: "); String journal = ConsoleHelper.readChoice(scanner);
         System.out.println(Colors.gray("  DOI = Digital Object Identifier, e.g. 10.1109/access.2022.3001234"));
@@ -99,13 +99,13 @@ public class ResearcherMenu {
     }
 
     private void viewHIndex() {
-        System.out.println(Colors.purple("\n  ── H-Index ──"));
+        System.out.println(Colors.purple("\n  -- H-Index --"));
         System.out.println("  Your current h-index: " + Colors.accent(String.valueOf(currentResearcher.getHIndex())));
         ConsoleHelper.pressEnterToContinue(scanner);
     }
 
     private void createProject() {
-        System.out.println(Colors.purple("\n  ── Create Research Project ──"));
+        System.out.println(Colors.purple("\n  -- Create Research Project --"));
         System.out.print("  Project topic: ");
         String topic = ConsoleHelper.readChoice(scanner);
         if (topic.isEmpty()) {
@@ -137,14 +137,14 @@ public class ResearcherMenu {
         ConsoleHelper.pressEnterToContinue(scanner);
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
     //  2. UNIVERSITY RESEARCH
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
     private void universityResearchMenu() {
         boolean back = false;
         while (!back) {
-            System.out.println(Colors.purple("\n  ── University Research ──"));
+            System.out.println(Colors.purple("\n  -- University Research --"));
             System.out.println("   1. All papers by date");
             System.out.println("   2. All papers by citations");
             System.out.println("   3. All papers by length");
@@ -166,7 +166,7 @@ public class ResearcherMenu {
     }
 
     private void printAllPapers(java.util.Comparator<?> comparator, String label) {
-        System.out.println(Colors.purple("\n  ── All Research Papers " + label + " ──"));
+        System.out.println(Colors.purple("\n  -- All Research Papers " + label + " --"));
         researchService.printAllPapers((java.util.Comparator<UniSpace.model.research.ResearchPaper>) comparator);
         ConsoleHelper.pressEnterToContinue(scanner);
     }
@@ -180,7 +180,7 @@ public class ResearcherMenu {
             ConsoleHelper.pressEnterToContinue(scanner);
             return;
         }
-        System.out.println(Colors.purple("\n  ── Top Cited Researcher — " + faculty + " ──"));
+        System.out.println(Colors.purple("\n  -- Top Cited Researcher — " + faculty + " --"));
         System.out.println("  " + top);
         System.out.println("  Total citations: " + Colors.accent(String.valueOf(top.getTotalCitations())));
         ConsoleHelper.pressEnterToContinue(scanner);
@@ -194,13 +194,13 @@ public class ResearcherMenu {
             ConsoleHelper.pressEnterToContinue(scanner);
             return;
         }
-        System.out.println(Colors.purple("\n  ── Top Cited Researcher — " + year + " ──"));
+        System.out.println(Colors.purple("\n  -- Top Cited Researcher — " + year + " --"));
         System.out.println("  " + top);
         System.out.println("  Total citations: " + Colors.accent(String.valueOf(top.getTotalCitations())));
         ConsoleHelper.pressEnterToContinue(scanner);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // -- Helpers ---------------------------------------------------------------
 
     private Faculty pickFaculty() {
         Faculty[] values = Faculty.values();
@@ -217,10 +217,10 @@ public class ResearcherMenu {
     }
 
     private void printMainMenu() {
-        System.out.println(Colors.gray("\n  ══════════════════════════════════════"));
+        System.out.println(Colors.gray("\n  ======================================"));
         System.out.println(Colors.bold("   Researcher Menu - " + ownerFaculty));
         System.out.println(Colors.gray("   h-index: ") + currentResearcher.getHIndex());
-        System.out.println(Colors.gray("  ══════════════════════════════════════"));
+        System.out.println(Colors.gray("  ======================================"));
         System.out.println("   1. My Research");
         System.out.println("   2. University Research");
         System.out.println(Colors.gray("   0. <- Back"));

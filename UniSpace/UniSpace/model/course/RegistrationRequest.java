@@ -43,8 +43,8 @@ public class RegistrationRequest implements Serializable {
     @Override
     public String toString() {
         String note = managerNote != null ? " | Note: " + managerNote : "";
-        return String.format("[%s] Student %-8s → %-8s  (%s)%s",
-                status, studentId, courseCode,
+        return String.format("[%s] [%s] Student %-8s -> %-8s  (%s)%s",
+                requestId.substring(0, 8), status, studentId, courseCode,
                 requestDate.toLocalDate(), note);
     }
 

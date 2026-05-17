@@ -68,9 +68,9 @@ public class TeacherMenu extends BaseMenu {
         List<Course> courses = courseService.getCoursesByInstructor(teacher.getId());
         if (courses.isEmpty()) { System.out.println("  No courses assigned to you."); }
         else {
-            System.out.println(Colors.purple("\n  ── Your Courses ──"));
+            System.out.println(Colors.purple("\n  -- Your Courses --"));
             System.out.printf("  %-10s %-32s %-8s %-12s %s%n", "Code", "Name", "Credits", "Faculty", "Year");
-            System.out.println("  " + "─".repeat(72));
+            System.out.println("  " + "-".repeat(72));
             for (Course c : courses) {
                 String fac = c.getTargetFaculty() != null ? c.getTargetFaculty().toString() : "All";
                 String yr  = c.getTargetYear() > 0 ? "Y" + c.getTargetYear() : "All";
@@ -85,7 +85,7 @@ public class TeacherMenu extends BaseMenu {
         List<Course> courses = courseService.getCoursesByInstructor(teacher.getId());
         if (courses.isEmpty()) { System.out.println("  No courses assigned to you."); return; }
 
-        System.out.println(Colors.purple("\n  ── Enter Mark ──"));
+        System.out.println(Colors.purple("\n  -- Enter Mark --"));
         System.out.println("  Your courses:");
         for (int i = 0; i < courses.size(); i++)
             System.out.printf("  %d. [%-8s] %s%n", i + 1, courses.get(i).getCourseCode(), courses.get(i).getName());
@@ -138,7 +138,7 @@ public class TeacherMenu extends BaseMenu {
         List<Course> courses = courseService.getCoursesByInstructor(teacher.getId());
         if (courses.isEmpty()) { System.out.println("  No courses assigned to you."); return; }
 
-        System.out.println(Colors.purple("\n  ── View Course Marks ──"));
+        System.out.println(Colors.purple("\n  -- View Course Marks --"));
         for (int i = 0; i < courses.size(); i++)
             System.out.printf("  %d. [%-8s] %s%n", i + 1, courses.get(i).getCourseCode(), courses.get(i).getName());
 
@@ -175,7 +175,7 @@ public class TeacherMenu extends BaseMenu {
     }
 
     private void sendComplaint() {
-        System.out.println(Colors.purple("\n  ── Send Complaint ──"));
+        System.out.println(Colors.purple("\n  -- Send Complaint --"));
         User recipient = ConsoleHelper.selectUserFromDirectory(
                 DataRepository.getInstance().getUsers().values(), teacher.getId(),
                 java.util.EnumSet.of(UserRole.TEACHER, UserRole.STUDENT, UserRole.MANAGER),
@@ -223,7 +223,7 @@ public class TeacherMenu extends BaseMenu {
             }
         }
 
-        System.out.println("  1. Submit researcher role request");
+        System.out.println(Colors.green("  1.") + " Submit researcher role request");
         System.out.println(Colors.gray("  0. <- Back"));
         System.out.print("  Choice: ");
         if ("1".equals(ConsoleHelper.readChoice(scanner))) {
@@ -255,13 +255,13 @@ public class TeacherMenu extends BaseMenu {
                 && ResearcherRequestService.getInstance().hasPendingRequest(teacher.getId());
         String resLabel = (isProfessor || isRes) ? "Researcher mode"
                 : hasPending ? "Researcher mode [request pending]"
-                : "Researcher mode [submit request]";
+                : "Researcher mode " + Colors.yellow("[submit request]");
         int unread = messageService.getUnreadCount(teacher.getId());
 
-        System.out.println(Colors.gray("\n  ══════════════════════════════════════"));
+        System.out.println(Colors.gray("\n  ========================================"));
         System.out.println(Colors.bold("   Teacher Menu - " + teacher.getFullName()
                 + " [" + teacher.getTitle() + "]"));
-        System.out.println(Colors.gray("  ══════════════════════════════════════"));
+        System.out.println(Colors.gray("  ========================================"));
         System.out.println("   1. View my courses");
         System.out.println("   2. Enter / update a mark");
         System.out.println("   3. View marks for a course");

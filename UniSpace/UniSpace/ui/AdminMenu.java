@@ -65,9 +65,9 @@ public class AdminMenu {
     }
 
     private void printMenuOptions() {
-        System.out.println(Colors.gray("\n  ══════════════════════════════════════"));
+        System.out.println(Colors.gray("\n  ======================================"));
         System.out.println(Colors.bold("   Admin Menu - " + admin.getFullName()));
-        System.out.println(Colors.gray("  ══════════════════════════════════════"));
+        System.out.println(Colors.gray("  ======================================"));
         System.out.println("   1. Add User");
         System.out.println("   2. Remove User");
         System.out.println("   3. Update User");
@@ -79,12 +79,12 @@ public class AdminMenu {
         System.out.print("  Choice: ");
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
     //  1. ADD USER
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
     private void addUser() {
-        System.out.println(Colors.purple("\n  ── Add User ──"));
+        System.out.println(Colors.purple("\n  -- Add User --"));
 
         System.out.print("  First name: ");
         String firstName = scanner.nextLine().trim();
@@ -126,7 +126,7 @@ public class AdminMenu {
 
         User newUser = switch (role) {
             case STUDENT -> {
-                System.out.print("  Year of study (1–4): ");
+                System.out.print("  Year of study (1-4): ");
                 int year = 1;
                 try { year = Integer.parseInt(scanner.nextLine().trim()); }
                 catch (NumberFormatException ignored) {}
@@ -172,12 +172,12 @@ public class AdminMenu {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
     //  2. REMOVE USER
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
     private void removeUser() {
-        System.out.println(Colors.purple("\n  ── Remove User ──"));
+        System.out.println(Colors.purple("\n  -- Remove User --"));
 
         List<User> users = getSortedUsers();
         User target = Paginator.selectFromList(users, "Select User to Remove",
@@ -204,12 +204,12 @@ public class AdminMenu {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
     //  3. UPDATE USER
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
     private void updateUser() {
-        System.out.println(Colors.purple("\n  ── Update User ──"));
+        System.out.println(Colors.purple("\n  -- Update User --"));
 
         List<User> users = getSortedUsers();
         User target = Paginator.selectFromList(users, "Select User to Update",
@@ -259,14 +259,14 @@ public class AdminMenu {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
     //  4. VIEW LOGS
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
     private void viewLogs() {
         boolean back = false;
         while (!back) {
-            System.out.println(Colors.purple("\n  ── View Logs ──"));
+            System.out.println(Colors.purple("\n  -- View Logs --"));
             System.out.println("   1. Recent logs (last 20)");
             System.out.println("   2. All logs");
             System.out.println("   3. Logs by user");
@@ -297,14 +297,14 @@ public class AdminMenu {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
     //  5. VIEW COMPLAINTS
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
     private void viewComplaints() {
         boolean back = false;
         while (!back) {
-            System.out.println(Colors.purple("\n  ── View Complaints ──"));
+            System.out.println(Colors.purple("\n  -- View Complaints --"));
             System.out.println("   1. All complaints");
             System.out.println("   2. Pending complaints");
             System.out.println("   3. By recipient ID");
@@ -336,9 +336,9 @@ public class AdminMenu {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
     //  6. MANAGE COMPLAINTS
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
     private void manageComplaints() {
         List<Complaint> pending = complaintService.getPendingComplaints();
@@ -378,12 +378,12 @@ public class AdminMenu {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
     //  7. CLOSE ACADEMIC YEAR
-    // ══════════════════════════════════════════════════════════════════════════
+    // ==========================================================================
 
     private void closeYear() {
-        System.out.println(Colors.purple("\n  ── Close Academic Year ──"));
+        System.out.println(Colors.purple("\n  -- Close Academic Year --"));
         MarkService markService = MarkService.getInstance();
 
         List<Student> students = authService.getAllUsers().values().stream()
@@ -395,7 +395,7 @@ public class AdminMenu {
 
         System.out.println("\n  Students to process:");
         System.out.printf("  %-8s %-22s %-6s %-8s %s%n", "ID", "Name", "Year", "GPA", "Status");
-        System.out.println("  " + "─".repeat(60));
+        System.out.println("  " + "-".repeat(60));
         for (Student s : students) {
             List<Mark> marks = markService.getMarksForStudent(s.getId());
             boolean hasF  = marks.stream().anyMatch(m -> "F".equals(m.getLetterGrade()));
@@ -437,7 +437,7 @@ public class AdminMenu {
         ConsoleHelper.pressEnterToContinue(scanner);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // -- Helpers ---------------------------------------------------------------
 
     private static String formatComplaint(Complaint c) {
         String statusStr = switch (c.getStatus()) {

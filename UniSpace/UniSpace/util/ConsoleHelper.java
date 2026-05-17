@@ -51,7 +51,7 @@ public class ConsoleHelper {
     }
 
     public static void printTable(String title, List<String> rows) {
-        System.out.println(Colors.gray("\n  ── " + title + " ──"));
+        System.out.println(Colors.gray("\n  -- " + title + " --"));
         if (rows.isEmpty()) { System.out.println("    (No data)"); return; }
         for (String row : rows) System.out.println("    " + row);
     }
@@ -101,7 +101,7 @@ public class ConsoleHelper {
     public static void showUserDirectory(Collection<User> users, String excludeId) {
         System.out.println("\n  ── User Directory ──");
         System.out.printf("  %-10s %-25s %-12s%n", "ID", "Name", "Role");
-        System.out.println("  " + "─".repeat(50));
+        System.out.println("  " + "-".repeat(50));
         users.stream()
              .filter(u -> !u.getId().equals(excludeId))
              .sorted(java.util.Comparator.comparing(User::getLastName))
