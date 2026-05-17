@@ -6,6 +6,7 @@ import UniSpace.model.course.Mark;
 import UniSpace.model.course.RegistrationRequest;
 import UniSpace.model.log.LogEntry;
 import UniSpace.model.news.News;
+import UniSpace.model.research.ResearcherRequest;
 import UniSpace.model.user.User;
 
 import java.io.Serializable;
@@ -23,7 +24,7 @@ import java.util.Set;
  */
 public class DataStore implements Serializable {
 
-    private static final long serialVersionUID = 3L;
+    private static final long serialVersionUID = 5L;
 
     // ── User data ─────────────────────────────────────────────────────────────
     private final Map<String, User>          users;
@@ -40,6 +41,9 @@ public class DataStore implements Serializable {
     // ── Registration requests ─────────────────────────────────────────────────
     private final List<RegistrationRequest>  registrationRequests;
 
+    // ── Researcher role requests ───────────────────────────────────────────────
+    private final List<ResearcherRequest>    researcherRequests;
+
     // ── News ──────────────────────────────────────────────────────────────────
     private final List<News>                 newsList;
 
@@ -49,16 +53,23 @@ public class DataStore implements Serializable {
     // ── Logs ──────────────────────────────────────────────────────────────────
     private final List<LogEntry>             logs;
 
-    public DataStore(Map<String, User>         users,
-                     Map<String, Course>        courses,
-                     Map<String, Mark>          marks,
-                     Map<String, Set<String>>   studentCourses,
-                     Map<String, Integer>       studentCredits,
-                     Map<String, Integer>       failCounts,
-                     List<News>                 newsList,
-                     List<RegistrationRequest>  registrationRequests,
-                     List<Complaint>            complaints,
-                     List<LogEntry>             logs) {
+    // ── Message inboxes ───────────────────────────────────────────────────────
+    private final Map<String, List<String>>  inboxMessages;
+    private final Map<String, Integer>       inboxReadIndices;
+
+    public DataStore(Map<String, User>          users,
+                     Map<String, Course>         courses,
+                     Map<String, Mark>           marks,
+                     Map<String, Set<String>>    studentCourses,
+                     Map<String, Integer>        studentCredits,
+                     Map<String, Integer>        failCounts,
+                     List<News>                  newsList,
+                     List<RegistrationRequest>   registrationRequests,
+                     List<ResearcherRequest>     researcherRequests,
+                     List<Complaint>             complaints,
+                     List<LogEntry>              logs,
+                     Map<String, List<String>>   inboxMessages,
+                     Map<String, Integer>        inboxReadIndices) {
 
         this.users                = new HashMap<>(users);
         this.courses              = new HashMap<>(courses);
@@ -67,8 +78,11 @@ public class DataStore implements Serializable {
         this.failCounts           = new HashMap<>(failCounts);
         this.newsList             = new ArrayList<>(newsList);
         this.registrationRequests = new ArrayList<>(registrationRequests);
+        this.researcherRequests   = new ArrayList<>(researcherRequests);
         this.complaints           = new ArrayList<>(complaints);
         this.logs                 = new ArrayList<>(logs);
+        this.inboxMessages        = new HashMap<>(inboxMessages);
+        this.inboxReadIndices     = new HashMap<>(inboxReadIndices);
 
         // Deep-copy the inner sets so mutations don't affect saved state
         this.studentCourses = new HashMap<>();
@@ -86,7 +100,10 @@ public class DataStore implements Serializable {
     public Map<String, Integer>      getStudentCredits()       { return studentCredits; }
     public Map<String, Integer>      getFailCounts()           { return failCounts; }
     public List<News>                getNewsList()             { return newsList; }
-    public List<RegistrationRequest> getRegistrationRequests() { return registrationRequests; }
-    public List<Complaint>           getComplaints()           { return complaints; }
-    public List<LogEntry>            getLogs()                 { return logs; }
+    public List<RegistrationRequest> getRegistrationRequests()  { return registrationRequests; }
+    public List<ResearcherRequest>   getResearcherRequests()   { return researcherRequests; }
+    public List<Complaint>           getComplaints()            { return complaints; }
+    public List<LogEntry>            getLogs()                  { return logs; }
+    public Map<String, List<String>> getInboxMessages()         { return inboxMessages; }
+    public Map<String, Integer>      getInboxReadIndices()       { return inboxReadIndices; }
 }
