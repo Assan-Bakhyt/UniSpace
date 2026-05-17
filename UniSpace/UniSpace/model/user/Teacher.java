@@ -8,7 +8,9 @@ import UniSpace.model.course.Course;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Teacher extends Employee implements Comparable<Teacher> {
 
@@ -16,6 +18,9 @@ public class Teacher extends Employee implements Comparable<Teacher> {
     private List<Course> courses;
     private double rating;
     private int ratingCount;
+
+    /** studentId → rating given by that student (prevents double-rating, allows update). */
+    private Map<String, Double> studentRatings = new HashMap<>();
 
     public Teacher() {}
 
@@ -33,13 +38,12 @@ public class Teacher extends Employee implements Comparable<Teacher> {
     public void setTitle(TeacherTitle title) {
         this.title = title;
         if (title == TeacherTitle.PROFESSOR) {
-            activateResearcher(); // professors are always researchers (inherited from Employee)
+            activateResearcher();
         }
     }
 
     // ── Researcher override ───────────────────────────────────────────────────
 
-    /** Professors can never lose researcher status. */
     @Override
     public void setResearcher(boolean researcher) {
         if (title == TeacherTitle.PROFESSOR) return;
@@ -48,27 +52,41 @@ public class Teacher extends Employee implements Comparable<Teacher> {
 
     // ── Rating ────────────────────────────────────────────────────────────────
 
-    public void addRating(double newRating) throws ValidationException {
+    /**
+     * Adds or updates a student's rating for this teacher.
+     * Each student may rate only once; repeated calls update the existing rating.
+     */
+    public void addRating(String studentId, double newRating) throws ValidationException {
         if (newRating < 1 || newRating > 5)
             throw new ValidationException("rating", "Rating must be between 1 and 5");
-        this.rating = (this.rating * ratingCount + newRating) / (ratingCount + 1);
-        this.ratingCount++;
+        if (studentRatings == null) studentRatings = new HashMap<>();
+        studentRatings.put(studentId, newRating);
+        // Recalculate average from all student ratings
+        this.rating = studentRatings.values().stream()
+                .mapToDouble(Double::doubleValue).average().orElse(0.0);
+        this.ratingCount = studentRatings.size();
+    }
+
+    /** True if this student has already submitted a rating for this teacher. */
+    public boolean hasRatedBy(String studentId) {
+        return studentRatings != null && studentRatings.containsKey(studentId);
     }
 
     // ── Courses ───────────────────────────────────────────────────────────────
 
     public void addCourse(Course course) {
+        if (courses == null) courses = new ArrayList<>();
         if (!courses.contains(course)) courses.add(course);
     }
 
     public void removeCourse(Course course) {
-        courses.remove(course);
+        if (courses != null) courses.remove(course);
     }
 
     // ── Getters ───────────────────────────────────────────────────────────────
 
     public TeacherTitle getTitle()       { return title; }
-    public List<Course> getCourses()     { return Collections.unmodifiableList(courses); }
+    public List<Course> getCourses()     { return courses != null ? Collections.unmodifiableList(courses) : Collections.emptyList(); }
     public double       getRating()      { return rating; }
     public int          getRatingCount() { return ratingCount; }
 
@@ -82,7 +100,7 @@ public class Teacher extends Employee implements Comparable<Teacher> {
     @Override
     public String toString() {
         return super.toString() + String.format(
-                " | Title: %s | Rating: %.1f | Researcher: %s",
-                title, rating, isResearcher());
+                " | Title: %s | Rating: %.1f (%d) | Researcher: %s",
+                title, rating, ratingCount, isResearcher());
     }
 }
