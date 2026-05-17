@@ -39,22 +39,25 @@ public abstract class BaseMenu {
     }
 
     protected void sendMessage() {
-        User u = currentUser();
-        System.out.print("  Recipient user ID: ");
-        String toId = scanner.nextLine().trim();
+        User recipient = ConsoleHelper.selectUserFromDirectory(
+                DataRepository.getInstance().getUsers().values(),
+                currentUser().getId(), null, scanner);
+        if (recipient == null) return;
+
         System.out.print("  Message: ");
-        String text = scanner.nextLine().trim();
+        String text = ConsoleHelper.readChoice(scanner);
         if (text.isEmpty()) {
             System.out.println(Colors.red("  [ERROR] Message cannot be empty."));
             ConsoleHelper.pressEnterToContinue(scanner);
             return;
         }
-        boolean sent = messageService.send(u.getId(), u.getFullName(), toId, text);
+        boolean sent = messageService.send(
+                currentUser().getId(), currentUser().getFullName(), recipient.getId(), text);
         if (sent) {
             DataRepository.getInstance().save();
-            System.out.println(Colors.green("  Message sent."));
+            System.out.println(Colors.green("  Message sent to " + recipient.getFullName() + "."));
         } else {
-            System.out.println(Colors.red("  [ERROR] Recipient not found or not registered in this session."));
+            System.out.println(Colors.red("  [ERROR] Could not send message."));
         }
         ConsoleHelper.pressEnterToContinue(scanner);
     }

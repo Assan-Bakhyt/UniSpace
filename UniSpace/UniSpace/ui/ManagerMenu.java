@@ -743,68 +743,54 @@ public class ManagerMenu extends BaseMenu {
     // ══════════════════════════════════════════════════════════════════════════
 
     private void assignSupervisor() {
-        // List 4th-year students
         List<Student> fourthYear = getAllStudents().stream()
                 .filter(s -> s.getYear() == 4)
                 .collect(Collectors.toList());
 
         if (fourthYear.isEmpty()) {
             System.out.println("  No 4th-year students found.");
+            ConsoleHelper.pressEnterToContinue(scanner);
             return;
         }
 
-        System.out.println("\n  -- 4th-Year Students --");
-        System.out.printf("  %-8s %-24s %s%n", "ID", "Name", "Current Supervisor");
-        System.out.println("  " + "-".repeat(60));
-        for (Student s : fourthYear) {
-            String sup = s.getSupervisor() != null ? s.getSupervisor().getName() : "None";
-            System.out.printf("  %-8s %-24s %s%n", s.getId(), s.getFullName(), sup);
-        }
+        Student student = Paginator.selectFromList(fourthYear, "Assign Supervisor - Select Student",
+                s -> String.format("%-8s %-24s Supervisor: %s",
+                        s.getId(), s.getFullName(),
+                        s.getSupervisor() != null ? s.getSupervisor().getName() : Colors.gray("None")),
+                scanner);
+        if (student == null) return;
 
-        System.out.print("  Student ID: ");
-        String studentId = scanner.nextLine().trim();
-        User u = authService.getUserById(studentId);
-        if (!(u instanceof Student student) || student.getYear() != 4) {
-            System.out.println("  [ERROR] Not a valid 4th-year student ID.");
-            return;
-        }
-
-        // List available researchers
-        List<User> researcherUsers = authService.getAllUsers().values().stream()
+        List<User> researchers = authService.getAllUsers().values().stream()
+                .filter(user -> !user.getId().equals(student.getId()))
                 .filter(user -> {
-                    if (user instanceof Employee e) return e.isResearcher();
-                    if (user instanceof Student s)  return s.isResearcher();
+                    if (user instanceof Employee emp) return emp.isResearcher();
+                    if (user instanceof Student stu)  return stu.isResearcher();
                     return false;
+                })
+                .sorted((a, b) -> {
+                    ResearcherProfile pa = getProfile(a);
+                    ResearcherProfile pb = getProfile(b);
+                    return Integer.compare(
+                            pb != null ? pb.getHIndex() : 0,
+                            pa != null ? pa.getHIndex() : 0);
                 })
                 .collect(Collectors.toList());
 
-        if (researcherUsers.isEmpty()) {
-            System.out.println("  No researchers available in the system.");
+        if (researchers.isEmpty()) {
+            System.out.println("  No researchers available (excluding this student).");
+            ConsoleHelper.pressEnterToContinue(scanner);
             return;
         }
 
-        System.out.println("\n  -- Available Researchers --");
-        System.out.printf("  %-8s %-24s %s%n", "ID", "Name", "h-index");
-        System.out.println("  " + "-".repeat(45));
-        for (User r : researcherUsers) {
-            ResearcherProfile rp = getProfile(r);
-            if (rp != null)
-                System.out.printf("  %-8s %-24s %d%n", r.getId(), r.getFullName(), rp.getHIndex());
-        }
-
-        System.out.print("  Researcher ID: ");
-        String researcherId = scanner.nextLine().trim();
-        if (studentId.equals(researcherId)) {
-            System.out.println(Colors.red("  [ERROR] A student cannot be their own supervisor."));
-            return;
-        }
-        User ru = authService.getUserById(researcherId);
+        User ru = Paginator.selectFromList(researchers, "Assign Supervisor - Select Researcher (sorted by h-index)",
+                r -> {
+                    ResearcherProfile rp = getProfile(r);
+                    return String.format("%-8s %-24s h-index: %d",
+                            r.getId(), r.getFullName(), rp != null ? rp.getHIndex() : 0);
+                },
+                scanner);
+        if (ru == null) return;
         ResearcherProfile rp = getProfile(ru);
-
-        if (rp == null) {
-            System.out.println("  [ERROR] User is not a researcher.");
-            return;
-        }
 
         try {
             student.setSupervisor(rp);
@@ -812,10 +798,11 @@ public class ManagerMenu extends BaseMenu {
             System.out.println(Colors.green("  Supervisor assigned: " + ru.getFullName()
                     + " (h-index: " + rp.getHIndex() + ") -> " + student.getFullName()));
         } catch (HIndexException e) {
-            System.out.println("  [ERROR] " + e.getMessage());
+            System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
         } catch (ValidationException e) {
-            System.out.println("  [ERROR] " + e.getMessage());
+            System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
         }
+        ConsoleHelper.pressEnterToContinue(scanner);
     }
 
     private ResearcherProfile getProfile(User u) {

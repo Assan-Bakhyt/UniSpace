@@ -60,8 +60,28 @@ public class LoginMenu {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
+    private boolean verifyAdmin() {
+        System.out.println(Colors.yellow("  [ADMIN ONLY] This action requires admin authorization."));
+        System.out.print("  Admin email   : ");
+        String email = ConsoleHelper.readChoice(scanner);
+        System.out.print("  Admin password: ");
+        String password = ConsoleHelper.readChoice(scanner);
+
+        User adminUser = authService.getAllUsers().values().stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(email) && u instanceof Admin)
+                .findFirst().orElse(null);
+
+        if (adminUser == null || !Validator.verifyPassword(password, adminUser.getPassword())) {
+            System.out.println(Colors.red("  [ERROR] Invalid admin credentials."));
+            return false;
+        }
+        System.out.println(Colors.green("  Admin verified."));
+        return true;
+    }
+
     private void register() {
         System.out.println(Colors.purple("\n  -- Student Registration --"));
+        if (!verifyAdmin()) return;
 
         System.out.print("  First name : ");
         String firstName = ConsoleHelper.readChoice(scanner);
