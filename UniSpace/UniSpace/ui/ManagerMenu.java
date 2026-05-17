@@ -16,6 +16,7 @@ import UniSpace.model.user.Student;
 import UniSpace.model.user.Teacher;
 import UniSpace.model.user.User;
 import UniSpace.service.*;
+import UniSpace.service.LogService;
 import UniSpace.storage.DataRepository;
 import UniSpace.util.Colors;
 import UniSpace.util.ConsoleHelper;
@@ -59,7 +60,7 @@ public class ManagerMenu extends BaseMenu {
             printMainMenu();
             String choice = ConsoleHelper.readChoice(scanner);
             switch (choice) {
-                case "1"  -> manageRegistrationRequests();
+                case "1"  -> manageRequests();
                 case "2"  -> manageCourses();
                 case "3"  -> viewStudents();
                 case "4"  -> viewTeachers();
@@ -68,7 +69,6 @@ public class ManagerMenu extends BaseMenu {
                 case "7"  -> viewInbox();
                 case "8"  -> sendMessage();
                 case "9"  -> assignSupervisor();
-                case "10" -> manageResearcherRequests();
                 case "0"  -> running = false;
                 default   -> System.out.println(Colors.red("  Invalid option."));
             }
@@ -79,20 +79,26 @@ public class ManagerMenu extends BaseMenu {
     //  1. REGISTRATION REQUESTS
     // ══════════════════════════════════════════════════════════════════════════
 
-    private void manageRegistrationRequests() {
+    private void manageRequests() {
         boolean back = false;
         while (!back) {
-            int pendingCount = registrationService.getPendingRequests().size();
-            System.out.println(Colors.purple("\n  -- Registration Requests --")
-                    + (pendingCount > 0 ? Colors.yellow(" (" + pendingCount + " pending)") : ""));
-            System.out.println("   1. Process a pending request");
-            System.out.println("   2. View all requests (history)");
+            int regPending = registrationService.getPendingRequests().size();
+            int resPending = ResearcherRequestService.getInstance().getPendingRequests().size();
+            System.out.println(Colors.purple("\n  -- Requests --"));
+            System.out.println("   1. Process course registration request"
+                    + (regPending > 0 ? Colors.yellow(" (" + regPending + " pending)") : ""));
+            System.out.println("   2. View all course registration requests");
+            System.out.println("   3. Process researcher role request"
+                    + (resPending > 0 ? Colors.yellow(" (" + resPending + " pending)") : ""));
+            System.out.println("   4. View all researcher role requests");
             System.out.println(Colors.gray("   0. <- Back"));
             System.out.print("  Choice: ");
 
             switch (ConsoleHelper.readChoice(scanner)) {
                 case "1" -> processRegistrationRequest();
                 case "2" -> viewAllRequests();
+                case "3" -> processResearcherRequest(ResearcherRequestService.getInstance());
+                case "4" -> viewAllResearcherRequests(ResearcherRequestService.getInstance());
                 case "0" -> back = true;
                 default  -> System.out.println(Colors.red("  Invalid option."));
             }
@@ -107,7 +113,7 @@ public class ManagerMenu extends BaseMenu {
             return;
         }
         RegistrationRequest req = Paginator.selectFromList(pending, "Pending Registration Requests",
-                r -> String.format("[%s] [%s] Student %-8s -> %-8s  (%s)",
+                r -> String.format("ID:%-10s [%s] Student %-8s -> %-8s  (%s)",
                         r.getRequestId().substring(0, 8), r.getStatus(),
                         r.getStudentId(), r.getCourseCode(),
                         r.getRequestDate().toLocalDate()),
@@ -115,6 +121,7 @@ public class ManagerMenu extends BaseMenu {
         if (req == null) return;
 
         System.out.println();
+        System.out.println(Colors.gray("  Request ID : " + req.getRequestId()));
         System.out.println(Colors.green("   1. Approve") + "   " + Colors.red("  2. Reject")
                 + "   " + Colors.gray("  0. Cancel"));
         System.out.print("  Choice: ");
@@ -125,17 +132,43 @@ public class ManagerMenu extends BaseMenu {
                     RegistrationRequest approved = registrationService.approveRequest(req.getRequestId(), courseService);
                     DataRepository.getInstance().save();
                     System.out.println(Colors.green("  Approved: " + approved.getStudentId() + " -> " + approved.getCourseCode()));
+                    // Notify student
+                    User student = authService.getUserById(approved.getStudentId());
+                    if (student != null) {
+                        messageService.send(manager.getId(), manager.getFullName(), student.getId(),
+                                "Your registration for course " + approved.getCourseCode()
+                                + " has been APPROVED. You are now enrolled.");
+                        DataRepository.getInstance().save();
+                    }
+                    LogService.getInstance().log(manager.getId(), manager.getFullName(),
+                            "Approved course registration: " + approved.getStudentId() + " -> " + approved.getCourseCode());
                 } catch (CourseRegistrationException e) {
                     System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
                 }
             }
             case "2" -> {
-                System.out.print("  Reason (optional): ");
-                String reason = ConsoleHelper.readChoice(scanner);
+                String reason;
+                while (true) {
+                    System.out.print("  Rejection reason (required): ");
+                    reason = ConsoleHelper.readChoice(scanner);
+                    if (!reason.isEmpty()) break;
+                    System.out.println(Colors.red("  [ERROR] Reason cannot be empty."));
+                }
                 try {
-                    registrationService.rejectRequest(req.getRequestId(), reason.isEmpty() ? null : reason);
+                    registrationService.rejectRequest(req.getRequestId(), reason);
                     DataRepository.getInstance().save();
                     System.out.println(Colors.yellow("  Request rejected."));
+                    // Notify student
+                    User student = authService.getUserById(req.getStudentId());
+                    if (student != null) {
+                        messageService.send(manager.getId(), manager.getFullName(), student.getId(),
+                                "Your registration for course " + req.getCourseCode()
+                                + " was REJECTED. Reason: " + reason);
+                        DataRepository.getInstance().save();
+                    }
+                    LogService.getInstance().log(manager.getId(), manager.getFullName(),
+                            "Rejected course registration: " + req.getStudentId() + " -> " + req.getCourseCode()
+                            + " | Reason: " + reason);
                 } catch (CourseRegistrationException e) {
                     System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
                 }
@@ -645,27 +678,6 @@ public class ManagerMenu extends BaseMenu {
     //  11. RESEARCHER ROLE REQUESTS
     // ══════════════════════════════════════════════════════════════════════════
 
-    private void manageResearcherRequests() {
-        ResearcherRequestService rrs = ResearcherRequestService.getInstance();
-        boolean back = false;
-        while (!back) {
-            int pending = rrs.getPendingRequests().size();
-            System.out.println(Colors.purple("\n  -- Researcher Role Requests --")
-                    + (pending > 0 ? Colors.yellow(" (" + pending + " pending)") : ""));
-            System.out.println("   1. Process a pending request");
-            System.out.println("   2. View all requests");
-            System.out.println(Colors.gray("   0. <- Back"));
-            System.out.print("  Choice: ");
-
-            switch (ConsoleHelper.readChoice(scanner)) {
-                case "1" -> processResearcherRequest(rrs);
-                case "2" -> viewAllResearcherRequests(rrs);
-                case "0" -> back = true;
-                default  -> System.out.println(Colors.red("  Invalid option."));
-            }
-        }
-    }
-
     private void processResearcherRequest(ResearcherRequestService rrs) {
         List<ResearcherRequest> pending = rrs.getPendingRequests();
         if (pending.isEmpty()) {
@@ -767,6 +779,7 @@ public class ManagerMenu extends BaseMenu {
                     if (user instanceof Student stu)  return stu.isResearcher();
                     return false;
                 })
+                .filter(user -> { ResearcherProfile rp = getProfile(user); return rp != null && rp.getHIndex() >= 3; })
                 .sorted((a, b) -> {
                     ResearcherProfile pa = getProfile(a);
                     ResearcherProfile pb = getProfile(b);
@@ -777,12 +790,12 @@ public class ManagerMenu extends BaseMenu {
                 .collect(Collectors.toList());
 
         if (researchers.isEmpty()) {
-            System.out.println("  No researchers available (excluding this student).");
+            System.out.println(Colors.yellow("  No eligible supervisors (h-index >= 3) available."));
             ConsoleHelper.pressEnterToContinue(scanner);
             return;
         }
 
-        User ru = Paginator.selectFromList(researchers, "Assign Supervisor - Select Researcher (sorted by h-index)",
+        User ru = Paginator.selectFromList(researchers, "Assign Supervisor (h-index >= 3, sorted desc)",
                 r -> {
                     ResearcherProfile rp = getProfile(r);
                     return String.format("%-8s %-24s h-index: %d",
@@ -816,16 +829,16 @@ public class ManagerMenu extends BaseMenu {
     // ══════════════════════════════════════════════════════════════════════════
 
     private void printMainMenu() {
-        int regPending = registrationService.getPendingRequests().size();
-        int resPending = ResearcherRequestService.getInstance().getPendingRequests().size();
-        int unread     = messageService.getUnreadCount(manager.getId());
+        int pending = registrationService.getPendingRequests().size()
+                + ResearcherRequestService.getInstance().getPendingRequests().size();
+        int unread  = messageService.getUnreadCount(manager.getId());
 
         System.out.println(Colors.gray("\n  =================================================="));
         System.out.println(Colors.bold("   Manager Menu - " + manager.getFullName()
                 + "  [" + manager.getManagerType() + "]"));
         System.out.println(Colors.gray("  =================================================="));
-        System.out.println("   1. Registration Requests"
-                + (regPending > 0 ? Colors.yellow(" (" + regPending + " pending)") : ""));
+        System.out.println("   1. Requests"
+                + (pending > 0 ? Colors.yellow(" (" + pending + " pending)") : ""));
         System.out.println("   2. Manage Courses");
         System.out.println("   3. View Students");
         System.out.println("   4. View Teachers");
@@ -834,8 +847,6 @@ public class ManagerMenu extends BaseMenu {
         System.out.println("   7. View Inbox" + (unread > 0 ? Colors.yellow(" [" + unread + " unread]") : ""));
         System.out.println("   8. Send Message");
         System.out.println("   9. Assign research supervisor (4th-year students)");
-        System.out.println("   10. Researcher role requests"
-                + (resPending > 0 ? Colors.yellow(" (" + resPending + " pending)") : ""));
         System.out.println("   0. Logout");
         System.out.print("  Choice: ");
     }
