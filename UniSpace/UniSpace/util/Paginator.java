@@ -47,8 +47,8 @@ public class Paginator {
             int from = page * PAGE_SIZE;
             int to   = Math.min(from + PAGE_SIZE, filtered.size());
 
-            System.out.println(Colors.purple("\n  ── " + title
-                    + (filter.isEmpty() ? "" : " [filter: \"" + filter + "\"]") + " ──")
+            System.out.println(Colors.purple("\n  -- " + title
+                    + (filter.isEmpty() ? "" : " [filter: \"" + filter + "\"]") + " --")
                     + Colors.gray(" (" + filtered.size() + " items, page " + (page + 1) + "/" + totalPages + ")"));
 
             if (filtered.isEmpty()) {
@@ -112,7 +112,7 @@ public class Paginator {
             int from = page * PAGE_SIZE;
             int to   = Math.min(from + PAGE_SIZE, items.size());
 
-            System.out.println(Colors.purple("\n  ── " + title + " ──")
+            System.out.println(Colors.purple("\n  -- " + title + " --")
                     + Colors.gray(" (" + items.size() + " total, page " + (page + 1) + "/" + totalPages + ")"));
             for (int i = from; i < to; i++) {
                 System.out.println("  " + display.apply(items.get(i)));

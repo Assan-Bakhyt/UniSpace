@@ -6,6 +6,7 @@ import UniSpace.model.research.ResearcherRequest;
 import UniSpace.model.user.Teacher;
 import UniSpace.model.user.User;
 import UniSpace.service.ComplaintService;
+import UniSpace.service.LogService;
 import UniSpace.service.CourseService;
 import UniSpace.service.MarkService;
 import UniSpace.service.MessageService;
@@ -13,6 +14,7 @@ import UniSpace.service.ResearchService;
 import UniSpace.service.ResearcherRequestService;
 import UniSpace.enums.TeacherTitle;
 import UniSpace.enums.UserRole;
+import UniSpace.service.AcademicYearService;
 import UniSpace.storage.DataRepository;
 import UniSpace.util.Colors;
 import UniSpace.util.ConsoleHelper;
@@ -82,6 +84,12 @@ public class TeacherMenu extends BaseMenu {
     }
 
     private void putMark() {
+        if (AcademicYearService.getInstance().isYearClosed()) {
+            System.out.println(Colors.red("\n  [LOCKED] The academic year is closed."
+                    + " Marks cannot be entered or modified."));
+            ConsoleHelper.pressEnterToContinue(scanner);
+            return;
+        }
         List<Course> courses = courseService.getCoursesByInstructor(teacher.getId());
         if (courses.isEmpty()) { System.out.println("  No courses assigned to you."); return; }
 
@@ -126,8 +134,13 @@ public class TeacherMenu extends BaseMenu {
             }
             DataRepository.getInstance().save();
             System.out.println(Colors.green("  Mark saved."));
-            markService.getMark(studentId, courseCode)
-                    .ifPresent(m -> System.out.println("  Current status: " + m));
+            markService.getMark(studentId, courseCode).ifPresent(m -> {
+                System.out.println("  Current status: " + m);
+                String component = comp.equals("1") ? "Att1" : comp.equals("2") ? "Att2" : "Final";
+                LogService.getInstance().log(teacher.getId(), teacher.getFullName(),
+                        "Entered " + component + " for " + studentId + " in " + courseCode
+                        + ": " + score + " -> grade: " + m.getLetterGrade());
+            });
         } catch (IllegalArgumentException e) {
             System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
         }
@@ -223,7 +236,7 @@ public class TeacherMenu extends BaseMenu {
             }
         }
 
-        System.out.println(Colors.green("  1.") + " Submit researcher role request");
+        System.out.println(Colors.green("  1. Submit researcher role request"));
         System.out.println(Colors.gray("  0. <- Back"));
         System.out.print("  Choice: ");
         if ("1".equals(ConsoleHelper.readChoice(scanner))) {
@@ -258,9 +271,14 @@ public class TeacherMenu extends BaseMenu {
                 : "Researcher mode " + Colors.yellow("[submit request]");
         int unread = messageService.getUnreadCount(teacher.getId());
 
+        AcademicYearService ays = AcademicYearService.getInstance();
+        String yearStatus = ays.isYearClosed()
+                ? Colors.red("CLOSED") : Colors.green("OPEN");
         System.out.println(Colors.gray("\n  ========================================"));
         System.out.println(Colors.bold("   Teacher Menu - " + teacher.getFullName()
                 + " [" + teacher.getTitle() + "]"));
+        System.out.println(Colors.gray("  Academic Year: " + ays.getCurrentYear()
+                + "  [" + yearStatus + "]"));
         System.out.println(Colors.gray("  ========================================"));
         System.out.println("   1. View my courses");
         System.out.println("   2. Enter / update a mark");

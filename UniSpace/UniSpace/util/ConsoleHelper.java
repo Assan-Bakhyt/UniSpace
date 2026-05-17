@@ -99,7 +99,7 @@ public class ConsoleHelper {
      * Legacy print-only version — kept for internal use where no selection is needed.
      */
     public static void showUserDirectory(Collection<User> users, String excludeId) {
-        System.out.println("\n  ── User Directory ──");
+        System.out.println("\n  -- User Directory --");
         System.out.printf("  %-10s %-25s %-12s%n", "ID", "Name", "Role");
         System.out.println("  " + "-".repeat(50));
         users.stream()

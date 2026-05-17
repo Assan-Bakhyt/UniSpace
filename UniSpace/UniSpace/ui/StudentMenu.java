@@ -10,6 +10,7 @@ import UniSpace.model.user.Student;
 import UniSpace.model.user.Teacher;
 import UniSpace.model.user.User;
 import UniSpace.model.course.RegistrationRequest;
+import UniSpace.service.AcademicYearService;
 import UniSpace.service.AuthService;
 import UniSpace.service.CourseService;
 import UniSpace.service.MarkService;
@@ -78,9 +79,11 @@ public class StudentMenu extends BaseMenu {
     private void registerCourse() {
         Set<String> enrolledCodes = courseService.getStudentCourses(student.getId())
                 .stream().map(Course::getCourseCode).collect(Collectors.toSet());
+        Set<String> completedCodes = courseService.getCompletedCoursesForStudent(student.getId());
 
         List<Course> available = courseService.getAllCourses().stream()
                 .filter(c -> !enrolledCodes.contains(c.getCourseCode()))
+                .filter(c -> !completedCodes.contains(c.getCourseCode()))
                 .filter(c -> c.getTargetYear() == 0 || c.getTargetYear() == student.getYear())
                 .filter(c -> c.getTargetFaculty() == null || c.getTargetFaculty() == student.getFaculty())
                 .collect(Collectors.toList());
@@ -348,7 +351,7 @@ public class StudentMenu extends BaseMenu {
             }
         }
 
-        System.out.println(Colors.green("  1.") + " Submit researcher role request");
+        System.out.println(Colors.green("  1. Submit researcher role request"));
         System.out.println(Colors.gray("  0. <- Back"));
         System.out.print("  Choice: ");
         if ("1".equals(ConsoleHelper.readChoice(scanner))) {
@@ -386,8 +389,13 @@ public class StudentMenu extends BaseMenu {
                 : hasPending ? Colors.yellow("Researcher mode [request pending]")
                 : "Researcher mode " + Colors.yellow("[submit request]");
 
+        AcademicYearService ays = AcademicYearService.getInstance();
+        String yearStatus = ays.isYearClosed()
+                ? Colors.red("CLOSED") : Colors.green("OPEN");
         System.out.println(Colors.gray("\n  ========================================"));
         System.out.println(Colors.bold("   Student Menu - " + student.getFullName()));
+        System.out.println(Colors.gray("  Academic Year: " + ays.getCurrentYear()
+                + "  [" + yearStatus + "]"));
         System.out.println(Colors.gray("  ========================================"));
         System.out.println("   1. Register for a course");
         System.out.println("   2. Drop a course");
