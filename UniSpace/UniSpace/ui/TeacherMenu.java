@@ -1,55 +1,63 @@
 package UniSpace.ui;
 
+import UniSpace.exception.ValidationException;
 import UniSpace.model.course.Course;
-import UniSpace.model.course.Mark;
+import UniSpace.model.research.ResearcherRequest;
 import UniSpace.model.user.Teacher;
+import UniSpace.model.user.User;
+import UniSpace.service.ComplaintService;
 import UniSpace.service.CourseService;
 import UniSpace.service.MarkService;
 import UniSpace.service.MessageService;
 import UniSpace.service.ResearchService;
+import UniSpace.service.ResearcherRequestService;
 import UniSpace.enums.TeacherTitle;
+import UniSpace.enums.UserRole;
+import UniSpace.storage.DataRepository;
+import UniSpace.util.Colors;
+import UniSpace.util.ConsoleHelper;
 
 import java.util.List;
-import java.util.Scanner;
 
 /**
  * Console menu for teachers.
  */
-public class TeacherMenu {
+public class TeacherMenu extends BaseMenu {
 
     private final Teacher         teacher;
     private final CourseService   courseService;
     private final MarkService     markService;
     private final ResearchService researchService;
-    private final MessageService  messageService;
-    private final Scanner         scanner;
 
     public TeacherMenu(Teacher teacher, CourseService courseService,
                        MarkService markService, ResearchService researchService,
                        MessageService messageService) {
+        super(messageService);
         this.teacher         = teacher;
         this.courseService   = courseService;
         this.markService     = markService;
         this.researchService = researchService;
-        this.messageService  = messageService;
-        this.scanner         = new Scanner(System.in);
     }
+
+    @Override
+    protected User currentUser() { return teacher; }
 
     public void show() {
         boolean running = true;
         while (running) {
             printMenu();
-            String choice = scanner.nextLine().trim();
+            String choice = ConsoleHelper.readChoice(scanner);
             switch (choice) {
                 case "1" -> viewMyCourses();
                 case "2" -> putMark();
                 case "3" -> viewCourseMarks();
-                case "4" -> viewInbox();
-                case "5" -> sendMessage();
-                case "6" -> viewCourseStudents();
-                case "7" -> handleResearcherOption();  // ← ИЗМЕНЕНО
+                case "4" -> viewCourseStudents();
+                case "5" -> viewInbox();
+                case "6" -> sendMessage();
+                case "7" -> sendComplaint();
+                case "8" -> handleResearcherOption();
                 case "0" -> running = false;
-                default  -> System.out.println("  Invalid option. Try again.");
+                default  -> System.out.println(Colors.red("  Invalid option. Try again."));
             }
         }
     }
@@ -58,27 +66,56 @@ public class TeacherMenu {
 
     private void viewMyCourses() {
         List<Course> courses = courseService.getCoursesByInstructor(teacher.getId());
-        if (courses.isEmpty()) { System.out.println("  No courses assigned to you."); return; }
-        System.out.println("\n  ── Your Courses ──");
-        for (Course c : courses) {
-            System.out.printf("    %-10s %-30s (%d credits)%n",
-                    c.getCourseCode(), c.getName(), c.getCredits());
+        if (courses.isEmpty()) { System.out.println("  No courses assigned to you."); }
+        else {
+            System.out.println(Colors.purple("\n  ── Your Courses ──"));
+            System.out.printf("  %-10s %-32s %-8s %-12s %s%n", "Code", "Name", "Credits", "Faculty", "Year");
+            System.out.println("  " + "─".repeat(72));
+            for (Course c : courses) {
+                String fac = c.getTargetFaculty() != null ? c.getTargetFaculty().toString() : "All";
+                String yr  = c.getTargetYear() > 0 ? "Y" + c.getTargetYear() : "All";
+                System.out.printf("  %-10s %-32s %-8d %-12s %s%n",
+                        c.getCourseCode(), c.getName(), c.getCredits(), fac, yr);
+            }
         }
+        ConsoleHelper.pressEnterToContinue(scanner);
     }
 
     private void putMark() {
-        String studentId  = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Student ID: ");
-        String courseCode = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Course code: ");
+        List<Course> courses = courseService.getCoursesByInstructor(teacher.getId());
+        if (courses.isEmpty()) { System.out.println("  No courses assigned to you."); return; }
 
-        if (courseService.getCoursesByInstructor(teacher.getId()).stream()
-                .noneMatch(c -> c.getCourseCode().equals(courseCode))) {
-            System.out.println("  [ERROR] You are not teaching this course.");
+        System.out.println(Colors.purple("\n  ── Enter Mark ──"));
+        System.out.println("  Your courses:");
+        for (int i = 0; i < courses.size(); i++)
+            System.out.printf("  %d. [%-8s] %s%n", i + 1, courses.get(i).getCourseCode(), courses.get(i).getName());
+
+        int idx = ConsoleHelper.readInt(scanner, "  Select course: ") - 1;
+        if (idx < 0 || idx >= courses.size()) { System.out.println("  Invalid selection."); return; }
+        String courseCode = courses.get(idx).getCourseCode();
+
+        // Show enrolled students
+        List<String> studentRows = new java.util.ArrayList<>();
+        for (User u : DataRepository.getInstance().getUsers().values()) {
+            if (u instanceof UniSpace.model.user.Student s &&
+                    courseService.getStudentCourses(s.getId()).stream()
+                            .anyMatch(c -> c.getCourseCode().equals(courseCode))) {
+                studentRows.add(String.format("  %-10s %s", s.getId(), s.getFullName()));
+            }
+        }
+        if (studentRows.isEmpty()) {
+            System.out.println(Colors.yellow("  No students enrolled in this course."));
+            ConsoleHelper.pressEnterToContinue(scanner);
             return;
         }
+        System.out.println("  Enrolled students:");
+        studentRows.forEach(System.out::println);
 
-        String comp  = UniSpace.util.ConsoleHelper.readNonEmpty(scanner,
-                "  Component (1=att1 / 2=att2 / 3=final): ");
-        double score = UniSpace.util.ConsoleHelper.readDouble(scanner, "  Score: ");
+        String studentId = ConsoleHelper.readNonEmpty(scanner, "  Student ID: ");
+
+        System.out.println("  Component: 1=Attestation 1  2=Attestation 2  3=Final Exam");
+        String comp  = ConsoleHelper.readNonEmpty(scanner, "  Choice (1/2/3): ");
+        double score = ConsoleHelper.readDouble(scanner, "  Score: ");
 
         try {
             switch (comp) {
@@ -87,103 +124,118 @@ public class TeacherMenu {
                 case "3" -> markService.setFinalExam(studentId, courseCode, score);
                 default  -> { System.out.println("  [ERROR] Unknown component."); return; }
             }
-            System.out.println("  Mark saved.");
-            UniSpace.storage.DataRepository.getInstance().save();
+            DataRepository.getInstance().save();
+            System.out.println(Colors.green("  Mark saved."));
             markService.getMark(studentId, courseCode)
-                    .ifPresent(m -> System.out.println("  Status: " + m));
+                    .ifPresent(m -> System.out.println("  Current status: " + m));
         } catch (IllegalArgumentException e) {
-            System.out.println("  [ERROR] " + e.getMessage());
+            System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
         }
+        ConsoleHelper.pressEnterToContinue(scanner);
     }
 
     private void viewCourseMarks() {
-        System.out.print("  Course code: ");
-        String courseCode = scanner.nextLine().trim();
-        System.out.println(markService.generateMarkReport(courseCode));
-    }
+        List<Course> courses = courseService.getCoursesByInstructor(teacher.getId());
+        if (courses.isEmpty()) { System.out.println("  No courses assigned to you."); return; }
 
-    private void viewInbox() {
-        List<String> messages = messageService.getInbox(teacher.getId());
-        if (messages.isEmpty()) { System.out.println("  Inbox is empty."); return; }
-        System.out.println("\n  ── Inbox ──");
-        messages.forEach(m -> System.out.println("  " + m));
-    }
+        System.out.println(Colors.purple("\n  ── View Course Marks ──"));
+        for (int i = 0; i < courses.size(); i++)
+            System.out.printf("  %d. [%-8s] %s%n", i + 1, courses.get(i).getCourseCode(), courses.get(i).getName());
 
-    private void sendMessage() {
-        System.out.print("  Recipient user ID: ");
-        String toId = scanner.nextLine().trim();
-        System.out.print("  Message: ");
-        String text = scanner.nextLine().trim();
-        boolean sent = messageService.send(
-                teacher.getId(), teacher.getFullName(), toId, text);
-        System.out.println(sent
-                ? "  Message sent."
-                : "  [ERROR] Recipient not found or not online.");
+        int idx = ConsoleHelper.readInt(scanner, "  Select course: ") - 1;
+        if (idx < 0 || idx >= courses.size()) { System.out.println("  Invalid selection."); return; }
+
+        String courseCode = courses.get(idx).getCourseCode();
+        System.out.println("\n" + markService.generateMarkReport(courseCode));
+        ConsoleHelper.pressEnterToContinue(scanner);
     }
 
     private void viewCourseStudents() {
-        String courseCode = UniSpace.util.ConsoleHelper.readNonEmpty(scanner, "  Course code: ");
-        if (courseService.getCoursesByInstructor(teacher.getId()).stream()
-                .noneMatch(c -> c.getCourseCode().equals(courseCode))) {
-            System.out.println("  [ERROR] You are not teaching this course.");
-            return;
-        }
+        List<Course> courses = courseService.getCoursesByInstructor(teacher.getId());
+        if (courses.isEmpty()) { System.out.println("  No courses assigned to you."); return; }
 
-        java.util.List<String> rows = new java.util.ArrayList<>();
-        for (UniSpace.model.user.User u :
-                UniSpace.storage.DataRepository.getInstance().getUsers().values()) {
-            if (u instanceof UniSpace.model.user.Student s) {
-                if (courseService.getStudentCourses(s.getId()).stream()
-                        .anyMatch(c -> c.getCourseCode().equals(courseCode))) {
-                    rows.add(String.format("%-10s %s", s.getId(), s.getFullName()));
-                }
+        System.out.println("\n  Your courses:");
+        for (int i = 0; i < courses.size(); i++)
+            System.out.printf("  %d. [%-8s] %s%n", i + 1, courses.get(i).getCourseCode(), courses.get(i).getName());
+
+        int idx = ConsoleHelper.readInt(scanner, "  Select course: ") - 1;
+        if (idx < 0 || idx >= courses.size()) { System.out.println("  Invalid selection."); return; }
+        String courseCode = courses.get(idx).getCourseCode();
+
+        List<String> rows = new java.util.ArrayList<>();
+        for (User u : DataRepository.getInstance().getUsers().values()) {
+            if (u instanceof UniSpace.model.user.Student s &&
+                    courseService.getStudentCourses(s.getId()).stream()
+                            .anyMatch(c -> c.getCourseCode().equals(courseCode))) {
+                rows.add(String.format("%-10s %s", s.getId(), s.getFullName()));
             }
         }
-        UniSpace.util.ConsoleHelper.printTable("Students in " + courseCode, rows);
+        ConsoleHelper.printTable("Students in " + courseCode, rows);
+        ConsoleHelper.pressEnterToContinue(scanner);
+    }
+
+    private void sendComplaint() {
+        System.out.println(Colors.purple("\n  ── Send Complaint ──"));
+        User recipient = ConsoleHelper.selectUserFromDirectory(
+                DataRepository.getInstance().getUsers().values(), teacher.getId(),
+                java.util.EnumSet.of(UserRole.TEACHER, UserRole.STUDENT, UserRole.MANAGER),
+                scanner);
+        if (recipient == null) return;
+        System.out.print("  Complaint text: ");
+        String text = ConsoleHelper.readChoice(scanner);
+        if (text.isEmpty()) { System.out.println("  [ERROR] Complaint text cannot be empty."); return; }
+        try {
+            ComplaintService.getInstance().submit(
+                    teacher.getId(), teacher.getFullName(),
+                    recipient.getId(), recipient.getFullName(), text);
+            DataRepository.getInstance().save();
+            System.out.println(Colors.green("  Complaint submitted successfully."));
+        } catch (IllegalArgumentException e) {
+            System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
+        }
+        ConsoleHelper.pressEnterToContinue(scanner);
     }
 
     // ── Researcher logic ──────────────────────────────────────────────────────
 
-    /**
-     * Единая точка входа для пункта 7:
-     * — Профессор: сразу открывает Researcher Mode (роль уже активна)
-     * — Не-профессор без роли: предлагает активировать
-     * — Не-профессор с ролью: открывает Researcher Mode
-     */
     private void handleResearcherOption() {
-        if (teacher.getTitle() == TeacherTitle.PROFESSOR) {
-            // Профессор всегда researcher — сразу в меню
-            openResearcherMode();
-            return;
-        }
-
-        // Не-профессор
-        if (!teacher.isResearcher()) {
-            activateResearcherRole();
-        }
-
-        // Если после активации роль есть — открываем меню
         if (teacher.isResearcher()) {
             openResearcherMode();
-        }
-    }
-
-    /**
-     * Активация researcher роли для не-профессоров.
-     * Только предлагает — не форсирует.
-     */
-    private void activateResearcherRole() {
-        System.out.println("\n  ── Activate Researcher Role ──");
-        System.out.println("  You are not a researcher yet.");
-        System.out.print("  Activate researcher role? (y/n): ");
-        if (!"y".equalsIgnoreCase(scanner.nextLine().trim())) {
-            System.out.println("  Cancelled.");
             return;
         }
-        teacher.activateResearcher();
-        researchService.addResearcher(teacher.getResearcherProfile());
-        UniSpace.storage.DataRepository.getInstance().save();
-        System.out.println("  Researcher role activated successfully.");
+        ResearcherRequestService rrs = ResearcherRequestService.getInstance();
+        boolean hasPending = rrs.hasPendingRequest(teacher.getId());
+
+        System.out.println("\n  You do not have the Researcher role.");
+        if (hasPending) {
+            System.out.println(Colors.yellow("  Your request is PENDING — waiting for manager review."));
+            ConsoleHelper.pressEnterToContinue(scanner);
+            return;
+        }
+
+        List<ResearcherRequest> previous = rrs.getRequestsByApplicant(teacher.getId());
+        if (!previous.isEmpty()) {
+            ResearcherRequest last = previous.get(previous.size() - 1);
+            if (last.getStatus() == ResearcherRequest.Status.REJECTED) {
+                System.out.println(Colors.red("  Your last request was REJECTED."));
+                if (last.getManagerNote() != null)
+                    System.out.println(Colors.gray("  Reason: " + last.getManagerNote()));
+            }
+        }
+
+        System.out.println("  1. Submit researcher role request");
+        System.out.println(Colors.gray("  0. <- Back"));
+        System.out.print("  Choice: ");
+        if ("1".equals(ConsoleHelper.readChoice(scanner))) {
+            try {
+                rrs.submitRequest(teacher.getId(), teacher.getFullName(), "TEACHER");
+                DataRepository.getInstance().save();
+                System.out.println(Colors.green("  Request submitted — a manager will review it shortly."));
+            } catch (ValidationException e) {
+                System.out.println(Colors.red("  [ERROR] " + e.getMessage()));
+            }
+        }
+        ConsoleHelper.pressEnterToContinue(scanner);
     }
 
     private void openResearcherMode() {
@@ -197,28 +249,27 @@ public class TeacherMenu {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void printMenu() {
-        boolean isRes      = teacher.isResearcher();
+        boolean isRes       = teacher.isResearcher();
         boolean isProfessor = teacher.getTitle() == TeacherTitle.PROFESSOR;
+        boolean hasPending  = !isRes && !isProfessor
+                && ResearcherRequestService.getInstance().hasPendingRequest(teacher.getId());
+        String resLabel = (isProfessor || isRes) ? "Researcher mode"
+                : hasPending ? "Researcher mode [request pending]"
+                : "Researcher mode [submit request]";
+        int unread = messageService.getUnreadCount(teacher.getId());
 
-        // Пункт 7 меняет текст в зависимости от состояния
-        String researcherLabel;
-        if (isProfessor || isRes) {
-            researcherLabel = "Researcher mode";
-        } else {
-            researcherLabel = "Activate researcher role";
-        }
-
-        System.out.println("\n  ══════════════════════════════════════");
-        System.out.println("   Teacher Menu — " + teacher.getFullName()
-                + " [" + teacher.getTitle() + "]");
-        System.out.println("  ══════════════════════════════════════");
+        System.out.println(Colors.gray("\n  ══════════════════════════════════════"));
+        System.out.println(Colors.bold("   Teacher Menu - " + teacher.getFullName()
+                + " [" + teacher.getTitle() + "]"));
+        System.out.println(Colors.gray("  ══════════════════════════════════════"));
         System.out.println("   1. View my courses");
         System.out.println("   2. Enter / update a mark");
-        System.out.println("   3. View all marks for a course");
-        System.out.println("   4. View inbox");
-        System.out.println("   5. Send message");
-        System.out.println("   6. View students in a course");
-        System.out.printf ("   7. %s%n", researcherLabel);
+        System.out.println("   3. View marks for a course");
+        System.out.println("   4. View students in a course");
+        System.out.println("   5. View inbox" + (unread > 0 ? Colors.yellow(" [" + unread + " unread]") : ""));
+        System.out.println("   6. Send message");
+        System.out.println("   7. Send complaint");
+        System.out.printf ("   8. %s%n", resLabel);
         System.out.println("   0. Exit");
         System.out.print("  Choice: ");
     }
