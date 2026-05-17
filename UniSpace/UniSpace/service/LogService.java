@@ -58,7 +58,7 @@ public class LogService implements Serializable, Observer {
         String logId = "LOG-" + idCounter.incrementAndGet();
         LogEntry entry = new LogEntry(logId, userId, userName, action);
         logs.add(entry);
-        System.out.println("[LOG] " + entry);
+        System.err.println("[LOG] " + entry);
         return entry;
     }
 
@@ -116,7 +116,7 @@ public class LogService implements Serializable, Observer {
      */
     public void clearLogs() {
         logs.clear();
-        System.out.println("[LOG] All logs cleared.");
+        System.err.println("[LOG] All logs cleared.");
     }
 
     /**
