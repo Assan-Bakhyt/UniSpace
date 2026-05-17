@@ -63,8 +63,7 @@ public class ComplaintService implements Serializable {
         Complaint complaint = new Complaint(complaintId, senderId, senderName,
                 recipientId, recipientName, text);
         complaints.put(complaintId, complaint);
-        System.out.println("[COMPLAINT] Submitted: " + complaint);
-        // Integration point: Could log this action via LogService here if needed
+        System.err.println("[COMPLAINT] Submitted: " + complaint);
         return complaint;
     }
 
@@ -76,7 +75,7 @@ public class ComplaintService implements Serializable {
      */
     public Complaint submit(Complaint complaint) {
         complaints.put(complaint.getId(), complaint);
-        System.out.println("[COMPLAINT] Submitted: " + complaint);
+        System.err.println("[COMPLAINT] Submitted: " + complaint);
         return complaint;
     }
 
@@ -168,11 +167,11 @@ public class ComplaintService implements Serializable {
         Complaint complaint = complaints.get(complaintId);
         if (complaint != null) {
             complaint.setStatus(status);
-            System.out.println("[COMPLAINT] Updated status of " + complaintId + " to " + status);
+            System.err.println("[COMPLAINT] Updated status of " + complaintId + " to " + status);
             // Integration point: Log action
             return true;
         }
-        System.out.println("[COMPLAINT] Complaint not found: " + complaintId);
+        System.err.println("[COMPLAINT] Complaint not found: " + complaintId);
         return false;
     }
 

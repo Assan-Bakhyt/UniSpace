@@ -92,8 +92,8 @@ public class ResearchService {
     }
 
     public Researcher getTopCitedResearcherByYear(int year) {
-        Researcher top        = null;
-        int        maxCit     = -1;
+        Researcher top    = null;
+        int        maxCit = 0;
         for (Researcher r : researchers) {
             int citations = r.getResearchPapers().stream()
                     .filter(p -> p.getDate() != null && p.getDate().getYear() == year)
