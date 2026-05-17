@@ -59,6 +59,8 @@ public class Student extends User implements Comparable<Student> {
                     "Only 4th-year students can have a research supervisor (current year: " + year + ")");
         if (supervisor.getHIndex() < 3)
             throw new HIndexException("Supervisor must have h-index >= 3, got: " + supervisor.getHIndex());
+        if (this.researcherProfile != null && this.researcherProfile == supervisor)
+            throw new ValidationException("supervisor", "A student cannot be their own supervisor");
         this.supervisor = supervisor;
     }
 
