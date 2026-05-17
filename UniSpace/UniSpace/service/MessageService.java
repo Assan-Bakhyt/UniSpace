@@ -57,4 +57,33 @@ public class MessageService {
         MessageObserver obs = observers.get(userId);
         return obs != null && obs.hasMessages();
     }
+
+    public int getUnreadCount(String userId) {
+        MessageObserver obs = observers.get(userId);
+        return obs != null ? obs.getUnreadCount() : 0;
+    }
+
+    public void markAllRead(String userId) {
+        MessageObserver obs = observers.get(userId);
+        if (obs != null) obs.markAllRead();
+    }
+
+    // ── Persistence snapshots ─────────────────────────────────────────────────
+
+    public java.util.Map<String, java.util.List<String>> getInboxMessages() {
+        java.util.Map<String, java.util.List<String>> result = new java.util.HashMap<>();
+        observers.forEach((id, obs) -> result.put(id, new java.util.ArrayList<>(obs.getInbox())));
+        return result;
+    }
+
+    public java.util.Map<String, Integer> getReadIndices() {
+        java.util.Map<String, Integer> result = new java.util.HashMap<>();
+        observers.forEach((id, obs) -> result.put(id, obs.getReadIndex()));
+        return result;
+    }
+
+    public void restoreUserInbox(String userId, java.util.List<String> messages, int readIndex) {
+        MessageObserver obs = observers.get(userId);
+        if (obs != null) obs.restoreInbox(messages, readIndex);
+    }
 }
